@@ -1,11 +1,13 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { Text } from 'react-native';
 
 import SessionCompleteScreen from '../features/session/screens/SessionCompleteScreen';
 import StatisticsScreen from '../features/statistics/screens/StatisticsScreen';
 import SettingsScreen from '../features/settings/screens/SettingsScreen';
 import HomeTimerScreen from '../features/timer/screens/HomeTimerScreen';
+import { colors } from '../core/theme/colors';
 import { ROUTES } from './routes';
 import { BottomTabParamList, TimerStackParamList } from './types';
 
@@ -31,7 +33,25 @@ function TimerStackNavigator() {
 
 export default function BottomTabs() {
 	return (
-		<Tab.Navigator screenOptions={{ headerShown: false }}>
+		<Tab.Navigator
+			screenOptions={{
+				headerShown: false,
+				tabBarActiveTintColor: '#fff',
+				tabBarInactiveTintColor: colors.textSecondary,
+				tabBarStyle: {
+					backgroundColor: colors.surface,
+					borderTopColor: colors.border,
+					elevation: 12,
+					shadowColor: colors.shadow,
+					shadowOpacity: 0.25,
+					shadowOffset: { width: 0, height: -4 },
+					shadowRadius: 16,
+				},
+				headerStyle: { backgroundColor: colors.background },
+				tabBarLabelStyle: { fontWeight: '600', fontSize: 12 },
+				tabBarIcon: ({ color }) => <Text style={{ color }}>●</Text>,
+			}}
+		>
 			<Tab.Screen
 				name={ROUTES.TABS.TIMER}
 				component={TimerStackNavigator}
