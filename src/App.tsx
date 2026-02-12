@@ -1,4 +1,7 @@
-// TODO: Wire NavigationContainer and RootNavigator here.
+import React from 'react';
+
+import AppNavigator from './navigation';
+
 export default function App() {
-  return null;
+  return <AppNavigator />;
 }
