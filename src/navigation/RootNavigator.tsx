@@ -47,11 +47,9 @@ export default function RootNavigator() {
 
 	return (
 		<RootStack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRouteName}>
-			{!hasCompletedOnboarding && (
-				<RootStack.Screen name={ROUTES.ROOT.ONBOARDING}>
-					{(props) => <OnboardingScreen {...props} onComplete={handleOnboardingComplete} />}
-				</RootStack.Screen>
-			)}
+			<RootStack.Screen name={ROUTES.ROOT.ONBOARDING}>
+				{(props) => <OnboardingScreen {...props} onComplete={handleOnboardingComplete} />}
+			</RootStack.Screen>
 			<RootStack.Screen name={ROUTES.ROOT.APP} component={BottomTabs} />
 		</RootStack.Navigator>
 	);
