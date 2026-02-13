@@ -13,5 +13,3 @@ export const ROUTES = {
     SESSION_COMPLETE: 'SessionComplete',
   },
 } as const;
-
-export type RouteValue<T extends Record<string, string>> = T[keyof T];
