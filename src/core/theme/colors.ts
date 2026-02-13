@@ -1,17 +1,27 @@
-// Centralized color palette for the blue, slightly-floating UI theme.
+// Centralized color palette - light, airy blue theme matching onboarding.
 export const colors = {
-	primary: '#2D7CF6',
-	primaryDark: '#1F5FC9',
-	primaryLight: '#5BA0FF',
-	background: '#0F172A',
-	surface: '#111827',
-	surfaceElevated: '#1F2937',
-	card: '#162133',
-	textPrimary: '#E5E7EB',
-	textSecondary: '#9CA3AF',
-	accent: '#22D3EE',
+	// Gradients
+	gradientStart: '#E8F4FF',
+	gradientMid: '#A8D5FF',
+	gradientEnd: '#6BB4E8',
+	// Primary colors
+	primary: '#6BB4E8',
+	primaryDeep: '#4A90C9',
+	primaryDark: '#2D5F8D',
+	primaryLight: '#A8D5FF',
+	// Backgrounds
+	background: '#F5F9FF',
+	surface: '#FFFFFF',
+	surfaceElevated: '#FFFFFF',
+	card: 'rgba(255,255,255,0.95)',
+	// Text
+	textPrimary: '#1A2332',
+	textSecondary: '#5A6B7D',
+	white: '#FFFFFF',
+	// Accents
+	accent: '#6BB4E8',
 	danger: '#F87171',
 	success: '#34D399',
-	border: 'rgba(255,255,255,0.08)',
-	shadow: 'rgba(0, 0, 0, 0.3)',
+	border: 'rgba(45,95,141,0.15)',
+	shadow: 'rgba(107,180,232,0.2)',
 };

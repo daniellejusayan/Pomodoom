@@ -1,15 +1,14 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import OnboardingScreen from '../features/onboarding/screens/OnboardingScreen';
+import { getOnboardingFlag, setOnboardingFlag } from '../services/storage';
 import BottomTabs from './BottomTabs';
 import { ROUTES } from './routes';
 import { RootStackParamList } from './types';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
-const ONBOARDING_STORAGE_KEY = 'pomodoom_onboarding_completed';
 
 export default function RootNavigator() {
 	const [isBootstrapping, setIsBootstrapping] = useState(true);
@@ -18,8 +17,8 @@ export default function RootNavigator() {
 	useEffect(() => {
 		const loadFlag = async () => {
 			try {
-				const stored = await AsyncStorage.getItem(ONBOARDING_STORAGE_KEY);
-				setHasCompletedOnboarding(stored === 'true');
+				const stored = await getOnboardingFlag();
+				setHasCompletedOnboarding(stored);
 			} finally {
 				setIsBootstrapping(false);
 			}
@@ -30,7 +29,7 @@ export default function RootNavigator() {
 
 	const handleOnboardingComplete = async () => {
 		setHasCompletedOnboarding(true);
-		await AsyncStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
+		await setOnboardingFlag(true);
 	};
 
 	const initialRouteName = useMemo(
