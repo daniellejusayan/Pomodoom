@@ -13,9 +13,9 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const startSession = (payload?: Partial<Session>) => {
     const session: Session = {
+      ...(payload as Session ?? {}),
       id: payload?.id ?? Date.now().toString(),
       start: payload?.start ?? Date.now(),
-      ...((payload as Session) ?? {}),
     };
     setActiveSession(session);
   };
