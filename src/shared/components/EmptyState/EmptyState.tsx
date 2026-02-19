@@ -8,7 +8,9 @@ import { Button } from '../Button';
 const EmptyState = ({ image, title, description, actionLabel, onAction }: EmptyStateProps) => (
   <View style={styles.container}>
     {image ? <Image source={image} style={styles.image} /> : null}
-    <Text variant="h3" style={{ textAlign: 'center' } as any}>{title}</Text>
+    <View style={{ alignItems: 'center' }}>
+      <Text variant="h3">{title}</Text>
+    </View>
     <Text variant="body" color="#6B7280">{description}</Text>
     {actionLabel && onAction ? (
       <View style={{ marginTop: 12 }}>
