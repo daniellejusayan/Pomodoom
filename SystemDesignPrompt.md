@@ -113,7 +113,7 @@ src/
     └── types.ts
 ```
 
-### 5. FILE ORGANIZATION RULES
+### 5. FILE ORGANIZATION RULES **SKIP THIS STEP I DONT WANNA DO THIS
 
 **Component File Structure:**
 ```typescript
@@ -173,11 +173,11 @@ Create these in `src/shared/components/` BEFORE any screen:
 **Button/** - Primary, secondary, outline variants
 **Card/** - Container with consistent styling
 **Text/** - Typography with variants (heading, body, caption)
-**Input/** - Text input with validation states
+**Input/** - Text input with validation states **none of my interactions need text inputs only buttons
 **Chip/** - Selectable chip/badge
 **Switch/** - Toggle with label
 **Modal/** - Bottom sheet and full-screen variants
-**Loader/** - Loading states
+**Loader/** - Loading states **may be used furing the stats page
 **EmptyState/** - No data placeholder
 
 Each component must have:
