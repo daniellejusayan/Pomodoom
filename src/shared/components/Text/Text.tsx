@@ -14,15 +14,18 @@ const Text = ({
   align = 'left',
   numberOfLines,
   accessibilityLabel,
+  style: incomingStyle,
+  ...rest
 }: TextProps) => {
   const variantStyle = styles[variant] || styles.body;
 
-  const style: any = [variantStyle, { textAlign: align }];
-  if (color) style.push({ color });
-  if (weight) style.push({ fontWeight: weight === 'bold' ? '700' : weight === 'medium' ? '500' : '400' });
+  const mergedStyle: any = [variantStyle, { textAlign: align }];
+  if (color) mergedStyle.push({ color });
+  if (weight) mergedStyle.push({ fontWeight: weight === 'bold' ? '700' : weight === 'medium' ? '500' : '400' });
+  if (incomingStyle) mergedStyle.push(incomingStyle);
 
   return (
-    <RNText accessibilityLabel={accessibilityLabel} numberOfLines={numberOfLines} style={style}>
+    <RNText accessibilityLabel={accessibilityLabel} numberOfLines={numberOfLines} style={mergedStyle} {...rest}>
       {children as any}
     </RNText>
   );
