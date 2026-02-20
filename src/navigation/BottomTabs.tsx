@@ -2,6 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons'; // For tab icons
 
 import SessionCompleteScreen from '../features/session/screens/SessionCompleteScreen';
 import StatisticsScreen from '../features/statistics/screens/StatisticsScreen';
@@ -49,23 +50,38 @@ export default function BottomTabs() {
 				},
 				headerStyle: { backgroundColor: colors.background },
 				tabBarLabelStyle: { fontWeight: '600', fontSize: 12 },
-				tabBarIcon: ({ color }) => <Text style={{ color }}>●</Text>,
 			}}
 		>
 			<Tab.Screen
-				name={ROUTES.TABS.TIMER}
-				component={TimerStackNavigator}
-				options={{ title: 'Home' }}
-			/>
-			<Tab.Screen
 				name={ROUTES.TABS.STATISTICS}
 				component={StatisticsScreen}
-				options={{ title: 'Statistics' }}
+				options={{ title: 'Statistics',
+					tabBarIcon: ({focused, color, size}) => (
+						<Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} 
+						size={size} color={color} />
+					)
+				}
+				}
+			/>
+			<Tab.Screen
+				name={ROUTES.TABS.TIMER}
+				component={TimerStackNavigator}
+				options={{ title: 'Home', 
+					tabBarIcon: ({focused, color, size}) => (
+						<Ionicons name={focused ? 'timer' : 'timer-outline'} 
+						size={size} color={color} />
+					)
+				 }}
 			/>
 			<Tab.Screen
 				name={ROUTES.TABS.SETTINGS}
 				component={SettingsScreen}
-				options={{ title: 'Settings' }}
+				options={{ title: 'Settings',
+					tabBarIcon: ({focused, color, size}) => (
+						<Ionicons name={focused ? 'settings' : 'settings-outline'} 
+						size={size} color={color} />
+					)
+				 }}
 			/>
 		</Tab.Navigator>
 	);
