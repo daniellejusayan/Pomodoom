@@ -127,7 +127,7 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
               ]}
             >
               <Image
-                source={require('../../../../../assets/focused_tomato.png')}
+                source={require('../../../../assets/focused_tomato.png')}
                 style={styles.illustration}
                 resizeMode="contain"
               />
