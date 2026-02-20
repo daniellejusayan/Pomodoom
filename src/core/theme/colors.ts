@@ -15,8 +15,8 @@ export const colors = {
 	surfaceElevated: '#FFFFFF',
 	card: 'rgba(255,255,255,0.95)',
 	// Text
-	textPrimary: '#1A2332',
-	textSecondary: '#5A6B7D',
+	textPrimary: '#0F1724',
+	textSecondary: '#33393f',
 	white: '#FFFFFF',
 	// Accents
 	accent: '#6BB4E8',

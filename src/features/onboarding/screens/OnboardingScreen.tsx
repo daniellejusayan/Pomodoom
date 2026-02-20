@@ -129,19 +129,19 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
               <Image
                 source={require('../../../../assets/focused_tomato.png')}
                 style={styles.illustration}
-                resizeMode="contain"
+                resizeMode="cover"
               />
             </Animated.View>
-          </View>
-
-          {/* Middle Section */}
+                      {/* Middle Section */}
           <View style={styles.middle}>
             <Text style={styles.title}>
               Boost Your Focus,{'\n'}Crush Your Goals.
             </Text>
             <Text style={styles.subtitle}>
-              Stay productive with focused sessions and refreshing breaks.
+              Achieve more with focused work {'\n'} sessions and refreshing breaks.{'\n'}{'\n'}
+              <Text style={{ fontWeight: 'bold' }}>Welcome to Pomodoom!</Text>
             </Text>
+          </View>
           </View>
 
           {/* Bottom Section */}
@@ -175,7 +175,7 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
                   <Animated.View
                     style={[
                       styles.shine,
-                      { transform: [{ translateX: shineAnim }] },
+                      { transform: [{ translateX: shineAnim }, { rotate: '20deg' }] },
                     ]}
                   />
                 </LinearGradient>
@@ -198,23 +198,24 @@ const styles = StyleSheet.create({
   },
 
   top: {
+    flex: 1,
     alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.xxl * 2,
+    justifyContent: 'center',
   },
 
   logo: {
-    fontSize: 32,
+    fontSize: 40,
     fontWeight: '800',
     color: colors.primaryDark,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.lg * 2, // 🔄 Increased bottom margin for better spacing with the illustration
+    marginTop: 40, // 🔄 Increased top margin for better spacing with the illustration
   },
 
   illustrationContainer: {
-    width: 240,
-    height: 240, // 🔄 Increased height to accommodate full illustration
+    width: 340,
+    height: 340, // 🔄 Increased height to accommodate full illustration
     borderRadius: 20,
-    backgroundColor: 'transparent', // 🔄 Changed to transparent for better image display
+    backgroundColor: 'rgba(255,255,255,0.1)', // 🔄 Changed opacity for better image display
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.md, // 🆕 Added padding for image breathing room
@@ -222,8 +223,8 @@ const styles = StyleSheet.create({
 
   /* 🆕 ADDED: Style for the illustration image */
   illustration: {
-    width: '100%',
-    height: '100%',
+    width: 320,
+    height: 320,
   },
 
   middle: {
@@ -258,6 +259,8 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     // 🆕 ADDED: Elevation for depth (Android)
     elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
 
   cta: {
@@ -277,7 +280,5 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 120,
     height: '100%',
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    transform: [{ rotate: '20deg' }],
   },
 });
