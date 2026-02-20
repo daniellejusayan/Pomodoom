@@ -1,13 +1,13 @@
 // Centralized color palette - light, airy blue theme matching onboarding.
 export const colors = {
 	// Gradients
-	gradientStart: '#E8F4FF',
-	gradientMid: '#A8D5FF',
-	gradientEnd: '#6BB4E8',
+	gradientStart: '#d6ebff',
+	gradientMid: '#9dd0ff',
+	gradientEnd: '#65bcfa',
 	// Primary colors
 	primary: '#6BB4E8',
-	primaryDeep: '#4A90C9',
-	primaryDark: '#2D5F8D',
+	primaryDeep: '#1883f1',
+	primaryDark: '#00213f',
 	primaryLight: '#A8D5FF',
 	// Backgrounds
 	background: '#F5F9FF',
@@ -16,7 +16,7 @@ export const colors = {
 	card: 'rgba(255,255,255,0.95)',
 	// Text
 	textPrimary: '#0F1724',
-	textSecondary: '#33393f',
+	textSecondary: '#161b20',
 	white: '#FFFFFF',
 	// Accents
 	accent: '#6BB4E8',

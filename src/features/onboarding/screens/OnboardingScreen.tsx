@@ -163,7 +163,7 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
               >
                 <LinearGradient
                   colors={[colors.primary, colors.primaryDeep]}
-                  start={{ x: 0, y: 0 }}
+                  start={{ x: 1, y: 0.05 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.cta}
                 >

@@ -31,6 +31,7 @@ export default function HomeTimerScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerRow}>
+        <Text style={styles.logo}>Pomodoom</Text>
         <Text style={styles.heading}>Focus Timer</Text>
         <Text style={styles.subhead}>Pick an interval and start</Text>
       </View>
@@ -85,6 +86,14 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     gap: spacing.xs,
+  },
+   logo: {
+    alignSelf: 'center',
+    fontSize: 40,
+    fontWeight: '800',
+    color: colors.primaryDark,
+    marginBottom: spacing.lg * 2, // 🔄 Increased bottom margin for better spacing with the illustration
+    marginTop: 40, // 🔄 Increased top margin for better spacing with the illustration
   },
   heading: {
     color: colors.textPrimary,
