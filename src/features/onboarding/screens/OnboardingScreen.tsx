@@ -7,6 +7,7 @@ import {
   Text,
   View,
   Pressable,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -27,6 +28,7 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
   const shineAnim = useRef(new Animated.Value(-150)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -56,6 +58,24 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
     Animated.timing(shineAnim, {
       toValue: 300,
       duration: 600,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // 🆕 ADDED: Button press animation (scale down then back up)
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // 🆕 ADDED: Button release animation
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
       useNativeDriver: true,
     }).start();
   };
@@ -102,16 +122,15 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
 
             <Animated.View
               style={[
-                styles.card,
+                styles.illustrationContainer,
                 { transform: [{ translateY: floatAnim }] },
               ]}
             >
-              <View style={styles.tomato} />
-              <View style={styles.eyeRow}>
-                <View style={styles.eye} />
-                <View style={styles.eye} />
-              </View>
-              <View style={styles.smile} />
+              <Image
+                source={require('../../../../assets/focused_tomato.png')}
+                style={styles.illustration}
+                resizeMode="contain"
+              />
             </Animated.View>
           </View>
 
@@ -128,19 +147,30 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
           {/* Bottom Section */}
           <View style={styles.bottom}>
             <Pressable
+              onPressIn={handlePressIn}  // 🆕 Scale down on press
+              onPressOut={handlePressOut} // 🆕 Scale back on release
               onPress={() => {
                 triggerShine();
                 handleGetStarted();
               }}
             >
-              <View style={styles.ctaWrapper}>
+              {/* 🆕 ADDED: Animated wrapper for scale transform */}
+              <Animated.View
+                style={[
+                  styles.ctaWrapper,
+                  { transform: [{ scale: scaleAnim }] },
+                ]}
+              >
                 <LinearGradient
                   colors={[colors.primary, colors.primaryDeep]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.cta}
                 >
-                  <Text style={styles.ctaText}>Get Started</Text>
+                  {/* 🔄 CHANGED: Show loading state if processing */}
+                  <Text style={styles.ctaText}>
+                    {isLoading ? 'Loading...' : 'Get Started'}
+                  </Text>
 
                   <Animated.View
                     style={[
@@ -149,7 +179,7 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
                     ]}
                   />
                 </LinearGradient>
-              </View>
+              </Animated.View>
             </Pressable>
           </View>
 
@@ -178,45 +208,20 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
   },
 
-  card: {
+  illustrationContainer: {
     width: 240,
-    height: 200,
+    height: 240, // 🔄 Increased height to accommodate full illustration
     borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.3)',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: spacing.md, // 🆕 Added padding for image breathing room
   },
 
-  tomato: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.primary,
-  },
-
-  eyeRow: {
-    position: 'absolute',
-    flexDirection: 'row',
-    gap: 20,
-    top: 90,
-  },
-
-  eye: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.primaryDark,
-  },
-
-  smile: {
-    position: 'absolute',
-    top: 110,
-    width: 50,
-    height: 20,
-    borderBottomWidth: 3,
-    borderColor: colors.primaryDark,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+  /* 🆕 ADDED: Style for the illustration image */
+  illustration: {
+    width: '100%',
+    height: '100%',
   },
 
   middle: {
@@ -244,6 +249,13 @@ const styles = StyleSheet.create({
   ctaWrapper: {
     borderRadius: 999,
     overflow: 'hidden',
+    // 🆕 ADDED: Shadow for depth (iOS)
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    // 🆕 ADDED: Elevation for depth (Android)
+    elevation: 5,
   },
 
   cta: {
