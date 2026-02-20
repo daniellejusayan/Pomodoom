@@ -3,11 +3,12 @@ import { SafeAreaView, StyleSheet, Switch, Text, TouchableOpacity, View } from '
 
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
-import { focusDurationsMinutes } from '../../../core/constants';
+import { focusDurationsMinutes, breakDurationMinutes, defaultBreakMinutes } from '../../../core/constants';
+import DurationSelector from '../../../shared/components/DurationSelector';
 
 export default function SettingsScreen() {
   const [focusMinutes, setFocusMinutes] = useState<number>(focusDurationsMinutes[2]);
-  const [breakMinutes, setBreakMinutes] = useState<number>(5);
+  const [breakMinutes, setBreakMinutes] = useState<number>(defaultBreakMinutes);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [vibrationEnabled, setVibrationEnabled] = useState<boolean>(true);
 
@@ -18,38 +19,20 @@ export default function SettingsScreen() {
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Durations</Text>
         <View style={styles.row}>
-          <Text style={styles.label}>Focus length</Text>
-          <View style={styles.chipRow}>
-            {focusDurationsMinutes.map((d) => {
-              const active = d === focusMinutes;
-              return (
-                <TouchableOpacity
-                  key={d}
-                  style={[styles.chip, active && styles.chipActive]}
-                  onPress={() => setFocusMinutes(d)}
-                >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{d}m</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <DurationSelector
+            label="Focus length"
+            options={focusDurationsMinutes}
+            value={focusMinutes}
+            onChange={setFocusMinutes}
+          />
         </View>
         <View style={styles.row}>
-          <Text style={styles.label}>Break length</Text>
-          <View style={styles.chipRow}>
-            {[5, 10, 15].map((d) => {
-              const active = d === breakMinutes;
-              return (
-                <TouchableOpacity
-                  key={d}
-                  style={[styles.chip, active && styles.chipActive]}
-                  onPress={() => setBreakMinutes(d)}
-                >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{d}m</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          <DurationSelector
+            label="Break length"
+            options={breakDurationMinutes}
+            value={breakMinutes}
+            onChange={setBreakMinutes}
+          />
         </View>
       </View>
 
