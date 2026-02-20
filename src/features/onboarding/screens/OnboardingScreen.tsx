@@ -127,7 +127,7 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
               ]}
             >
               <Image
-                source={require('../../../../assets/focused_tomato.png')}
+                source={require('../../../../../assets/focused_tomato.png')}
                 style={styles.illustration}
                 resizeMode="contain"
               />
@@ -200,19 +200,21 @@ const styles = StyleSheet.create({
   top: {
     alignItems: 'center',
     gap: spacing.md,
+    marginTop: spacing.xxl * 2,
   },
 
   logo: {
     fontSize: 32,
     fontWeight: '800',
     color: colors.primaryDark,
+    marginBottom: spacing.lg,
   },
 
   illustrationContainer: {
     width: 240,
     height: 240, // 🔄 Increased height to accommodate full illustration
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'transparent', // 🔄 Changed to transparent for better image display
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.md, // 🆕 Added padding for image breathing room
