@@ -32,7 +32,7 @@ export default function HomeTimerScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.logo}>Pomodoom</Text>
-        <Text style={styles.heading}>Focus Timer</Text>
+        <Text style={styles.heading}>Focus Mode</Text>
         <Text style={styles.subhead}>Pick an interval and start</Text>
       </View>
 
@@ -99,10 +99,12 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 24,
     fontWeight: '800',
+    alignSelf: 'center',  // 🆕 Centered heading for better visual hierarchy
   },
   subhead: {
     color: colors.textSecondary,
     fontSize: 15,
+    alignSelf: 'center',  // 🆕 Centered subhead for better visual hierarchy
   },
   timerCard: {
     backgroundColor: colors.card,
