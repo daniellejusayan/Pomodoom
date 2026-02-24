@@ -15,6 +15,7 @@ import { spacing } from '../../../core/theme/spacing';
 import { 
   focusDurationsMinutes, 
   breakDurationsMinutes as breakDurationMinutes,
+  longBreakMinutes,
 } from '../../../core/constants';
 
 import { useSettings } from '../../../context/SettingsContext';
@@ -24,11 +25,13 @@ export default function SettingsScreen() {
   const {
     focusDuration,
     breakDuration,
+    longBreakDuration,
     penaltyType,
     soundEnabled,
     vibrationEnabled,
     setFocusDuration,
     setBreakDuration,
+    setLongBreakDuration,
     setPenaltyType,
     setSoundEnabled,
     setVibrationEnabled,
@@ -51,8 +54,7 @@ export default function SettingsScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Focus Duration</Text>
             <View style={styles.chipsContainer}>
-              {/* Show first 4 durations: 15, 20, 25, 30 */}
-              {focusDurationsMinutes.slice(0, 4).map((duration) => {
+              {focusDurationsMinutes.filter((duration) => duration <= 45).map((duration) => {
                 const isActive = duration === focusDuration;
                 return (
                   <TouchableOpacity
@@ -61,7 +63,7 @@ export default function SettingsScreen() {
                     onPress={() => setFocusDuration(duration)}
                   >
                     <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                      {duration}
+                      {duration}m
                     </Text>
                   </TouchableOpacity>
                 );
@@ -73,7 +75,6 @@ export default function SettingsScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Break Duration</Text>
             <View style={styles.chipsContainer}>
-              {/* Show 5, 10, 15 */}
               {breakDurationMinutes.slice(0, 3).map((duration) => {
                 const isActive = duration === breakDuration;
                 return (
@@ -86,7 +87,31 @@ export default function SettingsScreen() {
                     onPress={() => setBreakDuration(duration)}
                   >
                     <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                      {duration}
+                      {duration}m
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* 🎯 LONG BREAK DURATION CARD */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Long Break Duration</Text>
+            <View style={styles.chipsContainer}>
+              {longBreakMinutes.map((duration) => {
+                const isActive = duration === longBreakDuration;
+                return (
+                  <TouchableOpacity
+                    key={duration}
+                    style={[
+                      styles.chip,
+                      isActive && styles.chipActive
+                    ]}
+                    onPress={() => setLongBreakDuration(duration)}
+                  >
+                    <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                      {duration}m
                     </Text>
                   </TouchableOpacity>
                 );
