@@ -117,7 +117,7 @@ export default function StatisticsScreen() {
             <View style={styles.lineChartContainer}>
               {/* Y-axis */}
               <View style={styles.lineYAxis}>
-                
+                <Text style={styles.yAxisLabel}>5</Text>
                 <Text style={styles.yAxisLabel}>4</Text>
                 <Text style={styles.yAxisLabel}>3</Text>
                 <Text style={styles.yAxisLabel}>2</Text>
