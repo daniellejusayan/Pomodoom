@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
   Animated,
+  Animated,
 } from 'react-native';
 <<<<<<< Updated upstream
 =======
@@ -61,6 +62,19 @@ export default function HomeTimerScreen() {
   // 🆕 CIRCLE FADE ANIMATION for end-of-timer feedback
   const circleOpacity = useRef(new Animated.Value(1)).current;
 
+  // 🆕 PROGRESS ANIMATION
+  const progressAnim = useRef(new Animated.Value(0)).current;              // 0..1
+  const totalDurationRef = useRef(0); // seconds
+  const CIRCLE_RADIUS = 110;
+  const STROKE_WIDTH = 10;
+  const circumference = 2 * Math.PI * (CIRCLE_RADIUS - STROKE_WIDTH / 2);
+  const dashOffset = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [circumference, 0],
+  });
+  // 🆕 CIRCLE FADE ANIMATION for end-of-timer feedback
+  const circleOpacity = useRef(new Animated.Value(1)).current;
+
     // 🎯 COUNTDOWN TIMER LOGIC
     useEffect(() => {
       let interval: NodeJS.Timeout;
@@ -92,11 +106,28 @@ export default function HomeTimerScreen() {
       }
     }, [timeRemaining, currentPhase]);
 
+    // 🆕 Update progress animation when timeRemaining changes
+    useEffect(() => {
+      if (currentPhase !== 'idle' && totalDurationRef.current > 0) {
+        const ratio = 1 - timeRemaining / totalDurationRef.current;
+        Animated.timing(progressAnim, {
+          toValue: ratio,
+          duration: 500,
+          useNativeDriver: false,
+        }).start();
+      }
+    }, [timeRemaining, currentPhase]);
+
     // 🎯 TIMER CONTROLS
     const handleStart = () => {
       if (currentPhase === 'idle') {
         // Start new focus session
         setCurrentPhase('focus');
+        const secs = focusDuration * 60;
+        setTimeRemaining(secs);
+        totalDurationRef.current = secs;
+        progressAnim.setValue(0);
+        circleOpacity.setValue(1);
         const secs = focusDuration * 60;
         setTimeRemaining(secs);
         totalDurationRef.current = secs;
@@ -119,10 +150,21 @@ export default function HomeTimerScreen() {
       setTimeRemaining(0);
       progressAnim.setValue(0);
       circleOpacity.setValue(1);
+      progressAnim.setValue(0);
+      circleOpacity.setValue(1);
     };
 
     const handleTimerComplete = () => {
       setIsRunning(false);
+      progressAnim.setValue(0);
+      // fade circle after delay
+      setTimeout(() => {
+        Animated.timing(circleOpacity, {
+          toValue: 0.4,
+          duration: 800,
+          useNativeDriver: true,
+        }).start();
+      }, 1000);
       progressAnim.setValue(0);
       // fade circle after delay
       setTimeout(() => {
@@ -153,6 +195,11 @@ export default function HomeTimerScreen() {
       totalDurationRef.current = secs;
       progressAnim.setValue(0);
       circleOpacity.setValue(1);
+      const secs = breakDuration * 60;
+      setTimeRemaining(secs);
+      totalDurationRef.current = secs;
+      progressAnim.setValue(0);
+      circleOpacity.setValue(1);
       setIsRunning(true);
     };
 
@@ -175,6 +222,11 @@ export default function HomeTimerScreen() {
 >>>>>>> Stashed changes
 
   return (
+    <LinearGradient
+      colors={[colors.gradientStart, colors.gradientMid, colors.gradientEnd]}
+      style={{ flex: 1 }}
+    >
+      <SafeAreaView style={styles.container}>
     <LinearGradient
       colors={[colors.gradientStart, colors.gradientMid, colors.gradientEnd]}
       style={{ flex: 1 }}
@@ -280,12 +332,16 @@ export default function HomeTimerScreen() {
             <View style={styles.cardHeader}>
               <Ionicons name="timer-outline" size={20} color={colors.primary} />
               <Text style={styles.sectionTitle}>Focus Duration (default)</Text>
+              <Text style={styles.sectionTitle}>Focus Duration (default)</Text>
             </View>
+            <View style={styles.chipsContainer}>
+              {focusDurationsMinutes.map((item) => {
             <View style={styles.chipsContainer}>
               {focusDurationsMinutes.map((item) => {
                 const isActive = item === focusDuration;
                 return (
                   <TouchableOpacity
+                    key={item}
                     key={item}
                     style={[styles.chip, isActive && styles.chipActive]}
                     onPress={() => setFocusDuration(item)}
@@ -295,6 +351,7 @@ export default function HomeTimerScreen() {
                     </Text>
                   </TouchableOpacity>
                 );
+              })}
               })}
             </View>
           </View>
@@ -310,11 +367,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent',
+    backgroundColor: 'transparent',
     padding: spacing.xl,
     gap: spacing.xl,
   },
   headerRow: {
     gap: spacing.xs,
+    marginTop: spacing.xxl *3, // 🔄 Increased top margin for better spacing with the illustration
     marginTop: spacing.xxl *3, // 🔄 Increased top margin for better spacing with the illustration
   },
    logo: {
@@ -429,6 +488,11 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '700',
     fontSize: 16,
+  },
+  chipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   chipsContainer: {
     flexDirection: 'row',
