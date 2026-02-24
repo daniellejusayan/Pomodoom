@@ -7,7 +7,7 @@ export const colors = {
 	// Primary colors
 	primary: '#6BB4E8',
 	primaryDeep: '#1883f1',
-	primaryDark: '#00213f',
+	primaryDark: '#00376b',
 	primaryLight: '#A8D5FF',
 	// Backgrounds
 	background: '#F5F9FF',
