@@ -1,7 +1,6 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
-import { Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons'; // For tab icons
 
 import SessionCompleteScreen from '../features/session/screens/SessionCompleteScreen';
@@ -48,7 +47,6 @@ export default function BottomTabs() {
 					shadowOffset: { width: 0, height: -4 },
 					shadowRadius: 16,
 				},
-				headerStyle: { backgroundColor: colors.background },
 				tabBarLabelStyle: { fontWeight: '600', fontSize: 12 },
 			}}
 		>

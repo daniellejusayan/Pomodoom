@@ -81,6 +81,13 @@ export default function HomeTimerScreen() {
 
   // 🎯 TIMER CONTROLS
   const handleStart = () => {
+// 🧪 TEMPORARY: Skip timer and go directly to Session Complete screen
+  // ⚠️ REMOVE THIS BLOCK TO RESTORE NORMAL TIMER FUNCTIONALITY
+  navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, { 
+    sessionId: Date.now().toString() 
+  });
+  return; // Exit early, skipping all the timer logic below
+  // ⚠️ END OF TEMPORARY CODE
     if (currentPhase === 'idle') {
       // Start new focus session
       setCurrentPhase('focus');
@@ -309,7 +316,7 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     gap: spacing.xs,
-    marginTop: spacing.xl,
+    marginTop: spacing.xxl*2,
   },
   heading: {
     color: colors.textPrimary,
