@@ -384,21 +384,22 @@ export default function HomeTimerScreen() {
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity 
-                  style={styles.controlButton}
-                  onPress={handleStart}
-                >
-                  <Ionicons name="play" size={24} color={colors.primary} />
-                  <Text style={styles.controlButtonText}>Resume</Text>
-                </TouchableOpacity>
-              )}
-              
-              <TouchableOpacity 
                 style={styles.controlButton}
                 onPress={handleStop}
               >
                 <Ionicons name="stop" size={24} color={colors.danger} />
                 <Text style={styles.controlButtonText}>Stop</Text>
               </TouchableOpacity>
+              )}
+              
+              <TouchableOpacity 
+                  style={styles.controlButton}
+                  onPress={handleStart}
+                >
+                  <Ionicons name="play" size={24} color={colors.primary} />
+                  <Text style={styles.controlButtonText}>Resume</Text>
+                </TouchableOpacity>
+              
             </View>
           )}
 

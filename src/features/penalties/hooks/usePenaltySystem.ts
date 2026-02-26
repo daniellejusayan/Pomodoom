@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSettings } from '../../../context/SettingsContext';
 import * as Haptics from 'expo-haptics';
 import type { Interruption, PenaltyAction, PenaltyType } from '../types/PenaltyTypes';
@@ -7,6 +7,11 @@ export const usePenaltySystem = () => {
   const { penaltyType, vibrationEnabled } = useSettings();
   const [sessionPauseCount, setSessionPauseCount] = useState(0);
   const [interruptions, setInterruptions] = useState<Interruption[]>([]);
+
+  // 🔧 FIX: Log penalty type changes for debugging
+  useEffect(() => {
+    console.log('Penalty type changed to:', penaltyType);
+  }, [penaltyType]);
 
   // 🎯 Calculate time penalty based on pause count
   const calculateTimePenalty = useCallback((pauseCount: number): number => {
@@ -49,7 +54,7 @@ export const usePenaltySystem = () => {
       sessionId,
       timestamp: new Date(),
       reason,
-      penaltyApplied: penaltyType,
+      penaltyApplied: penaltyType, // Log the penalty type applied for this interruption
     };
     
     setInterruptions(prev => [...prev, interruption]);
@@ -65,6 +70,8 @@ export const usePenaltySystem = () => {
     sessionId: string,
     reason: 'pause' | 'stop'
   ): PenaltyAction | null => {
+    // Log the penalty application for debugging
+    console.log('Applying penalty:', penaltyType, 'for reason:', reason);
     // Trigger haptic feedback if enabled
     if (vibrationEnabled) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
