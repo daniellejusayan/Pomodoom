@@ -24,6 +24,7 @@ import { usePenaltySystem } from '../../penalties/hooks/usePenaltySystem';
 import { PenaltyAlert } from '../../penalties/components/PenaltyAlert';
 import type { PenaltyAction } from '../../penalties/types/PenaltyTypes';
 import { AppState, AppStateStatus } from 'react-native';
+import { useSettings } from '../../../context/SettingsContext';
 
 type Nav = NativeStackNavigationProp<TimerStackParamList, typeof ROUTES.TIMER.HOME>;
 type TimerPhase = 'idle' | 'focus' | 'break';
@@ -59,8 +60,10 @@ export default function HomeTimerScreen() {
     applyPenalty,
     resetSessionPenalties,
     sessionPauseCount,
+    penaltyType: hookPenaltyType,
   } = usePenaltySystem();
   
+  const { penaltyType: currentPenaltyType } = useSettings();
   const [penaltyAlert, setPenaltyAlert] = useState<PenaltyAction | null>(null);
   const [pendingAction, setPendingAction] = useState<'pause' | 'stop' | null>(null);
   const sessionIdRef = useRef<string>(Date.now().toString());
@@ -102,6 +105,17 @@ export default function HomeTimerScreen() {
     const subscription = AppState.addEventListener('change', handleAppStateChange);
     return () => subscription.remove();
   }, [isRunning, currentPhase]);
+
+  // 🧪 DEBUG: Log penalty type changes
+  useEffect(() => {
+    console.log('HomeTimer sees penalty type:', currentPenaltyType);
+  }, [currentPenaltyType]);
+
+    // 🧪 DEBUG: Compare both values
+  useEffect(() => {
+    console.log('Context penalty:', currentPenaltyType);
+    console.log('Hook penalty:', hookPenaltyType);
+  }, [currentPenaltyType, hookPenaltyType]);
 
   const handleAppStateChange = (nextAppState: AppStateStatus) => {
     // If timer is running and app goes to background

@@ -20,8 +20,9 @@ export const colors = {
 	white: '#FFFFFF',
 	// Accents
 	accent: '#6BB4E8',
-	danger: '#F87171',
+	danger: '#E74C3C',
 	success: '#34D399',
 	border: 'rgba(45,95,141,0.15)',
 	shadow: 'rgba(107,180,232,0.2)',
+	warning: '#F39C12',
 };
