@@ -1,108 +1,481 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  FlatList,
+  Animated,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Circle } from 'react-native-svg';
 
-import { focusDurationsMinutes, defaultFocusMinutes } from '../../../core/constants';
+import { focusDurationsMinutes, defaultFocusMinutes, defaultBreakMinutes } from '../../../core/constants';
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
 import { ROUTES } from '../../../navigation/routes';
 import { TimerStackParamList } from '../../../navigation/types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+// Add these imports at the top
+import { usePenaltySystem } from '../../penalties/hooks/usePenaltySystem';
+import { PenaltyAlert } from '../../penalties/components/PenaltyAlert';
+import type { PenaltyAction } from '../../penalties/types/PenaltyTypes';
+import { AppState, AppStateStatus } from 'react-native';
+import { useSettings } from '../../../context/SettingsContext';
+
 type Nav = NativeStackNavigationProp<TimerStackParamList, typeof ROUTES.TIMER.HOME>;
+type TimerPhase = 'idle' | 'focus' | 'break';
 
 export default function HomeTimerScreen() {
   const navigation = useNavigation<Nav>();
-  const [selectedDuration, setSelectedDuration] = useState<number>(defaultFocusMinutes);
+  const AnimatedSvg = Animated.createAnimatedComponent(Svg);
+  const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-  const timerMessage = useMemo(() => `${selectedDuration} min focus`, [selectedDuration]);
+  const [currentPhase, setCurrentPhase] = useState<TimerPhase>('idle');
+  const [isRunning, setIsRunning] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(0); // in seconds
 
-  const handleComplete = () => {
-    navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, { sessionId: 'demo' });
+  // 🎯 DURATION SETTINGS - User-selected intervals
+  const [focusDuration, setFocusDuration] = useState<number>(defaultFocusMinutes);
+  const [breakDuration, setBreakDuration] = useState<number>(defaultBreakMinutes);
+
+  // 🆕 PROGRESS ANIMATION
+  const progressAnim = useRef(new Animated.Value(0)).current;              // 0..1
+  const totalDurationRef = useRef(0); // seconds
+  const CIRCLE_RADIUS = 110;
+  const STROKE_WIDTH = 10;
+  const circumference = 2 * Math.PI * (CIRCLE_RADIUS - STROKE_WIDTH / 2);
+  const dashOffset = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [circumference, 0],
+  });
+  // 🆕 CIRCLE FADE ANIMATION for end-of-timer feedback
+  const circleOpacity = useRef(new Animated.Value(1)).current;
+
+    // 🆕 Penalty system
+  const {
+    applyPenalty,
+    resetSessionPenalties,
+    sessionPauseCount,
+    penaltyType: hookPenaltyType,
+  } = usePenaltySystem();
+  
+  const { penaltyType: currentPenaltyType } = useSettings();
+  const [penaltyAlert, setPenaltyAlert] = useState<PenaltyAction | null>(null);
+  const [pendingAction, setPendingAction] = useState<'pause' | 'stop' | null>(null);
+  const sessionIdRef = useRef<string>(Date.now().toString());
+
+
+  // 🎯 COUNTDOWN TIMER LOGIC
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isRunning && timeRemaining > 0) {
+      interval = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            handleTimerComplete();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    
+    return () => clearInterval(interval);
+  }, [isRunning, timeRemaining]);
+
+  // 🆕 Update progress animation when timeRemaining changes
+  useEffect(() => {
+    if (currentPhase !== 'idle' && totalDurationRef.current > 0) {
+      const ratio = 1 - timeRemaining / totalDurationRef.current;
+      Animated.timing(progressAnim, {
+        toValue: ratio,
+        duration: 500,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [timeRemaining, currentPhase]);
+
+    // 🆕 Monitor app state for background detection
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, [isRunning, currentPhase]);
+
+  // 🧪 DEBUG: Log penalty type changes
+  useEffect(() => {
+    console.log('HomeTimer sees penalty type:', currentPenaltyType);
+  }, [currentPenaltyType]);
+
+    // 🧪 DEBUG: Compare both values
+  useEffect(() => {
+    console.log('Context penalty:', currentPenaltyType);
+    console.log('Hook penalty:', hookPenaltyType);
+  }, [currentPenaltyType, hookPenaltyType]);
+
+  const handleAppStateChange = (nextAppState: AppStateStatus) => {
+    // If timer is running and app goes to background
+    if (
+      isRunning &&
+      currentPhase === 'focus' &&
+      nextAppState === 'background'
+    ) {
+      // Trigger penalty for going to background
+      const penalty = applyPenalty(sessionIdRef.current, 'pause');
+      if (penalty) {
+        if (penalty.type === 'addTime' && penalty.timeAddedMinutes) {
+          // Add time immediately for background interruption
+          const additionalSeconds = penalty.timeAddedMinutes * 60;
+          setTimeRemaining(prev => prev + additionalSeconds);
+          totalDurationRef.current += additionalSeconds;
+        }
+        // Pause the timer
+        setIsRunning(false);
+      }
+    }
   };
 
+
+  // 🎯 TIMER CONTROLS
+  const handleStart = () => {
+// // 🧪 TEMPORARY: Skip timer and go directly to Session Complete screen
+//   // ⚠️ REMOVE THIS BLOCK TO RESTORE NORMAL TIMER FUNCTIONALITY
+//   navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, { 
+//     sessionId: Date.now().toString() 
+//   });
+//   return; // Exit early, skipping all the timer logic below
+//   // ⚠️ END OF TEMPORARY CODE
+      if (currentPhase === 'idle') {
+      // Create new session ID
+      sessionIdRef.current = Date.now().toString();
+      
+      // Start new focus session
+      setCurrentPhase('focus');
+      const secs = focusDuration * 60;
+      setTimeRemaining(secs);
+      totalDurationRef.current = secs;
+      progressAnim.setValue(0);
+      circleOpacity.setValue(1);
+      setIsRunning(true);
+    } else {
+      // Resume paused timer
+      setIsRunning(true);
+    }
+  };
+
+// 🔄 MODIFIED: handlePause with penalty
+  const handlePause = () => {
+    setPendingAction('pause');
+    const penalty = applyPenalty(sessionIdRef.current, 'pause');
+    
+    if (penalty) {
+      setPenaltyAlert(penalty);
+    } else {
+      // No penalty set, pause immediately
+      setIsRunning(false);
+    }
+  };
+
+// 🔄 MODIFIED: handleStop with penalty
+  const handleStop = () => {
+    setPendingAction('stop');
+    const penalty = applyPenalty(sessionIdRef.current, 'stop');
+    
+    if (penalty) {
+      setPenaltyAlert(penalty);
+    } else {
+      // No penalty set, stop immediately
+      executeStop();
+    }
+  };
+
+  // 🆕 Execute stop action
+  const executeStop = () => {
+    setIsRunning(false);
+    setCurrentPhase('idle');
+    setTimeRemaining(0);
+    progressAnim.setValue(0);
+    circleOpacity.setValue(1);
+    resetSessionPenalties();
+  };
+
+// 🔄 MODIFIED: handleTimerComplete - reset penalties on successful completion
+  const handleTimerComplete = () => {
+    setIsRunning(false);
+    progressAnim.setValue(0);
+    
+    setTimeout(() => {
+      Animated.timing(circleOpacity, {
+        toValue: 0.4,
+        duration: 800,
+        useNativeDriver: true,
+      }).start();
+    }, 1000);
+    
+    if (currentPhase === 'focus') {
+      // Reset penalties on successful completion
+      resetSessionPenalties();
+      
+      navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, { 
+        sessionId: sessionIdRef.current,
+      });
+      setCurrentPhase('idle');
+      
+      // Generate new session ID for next session
+      sessionIdRef.current = Date.now().toString();
+    } else if (currentPhase === 'break') {
+      setCurrentPhase('idle');
+      setTimeRemaining(0);
+    }
+  };
+
+    // 🆕 Handle penalty alert confirmation
+  const handlePenaltyConfirm = () => {
+    if (!penaltyAlert) return;
+
+    switch (penaltyAlert.type) {
+      case 'warning':
+        // User confirmed they want to pause/stop
+        if (pendingAction === 'pause') {
+          setIsRunning(false);
+        } else if (pendingAction === 'stop') {
+          executeStop();
+        }
+        break;
+
+      case 'resetTimer':
+        // Reset timer to original duration
+        const secs = focusDuration * 60;
+        setTimeRemaining(secs);
+        totalDurationRef.current = secs;
+        progressAnim.setValue(0);
+        setIsRunning(false);
+        break;
+
+      case 'addTime':
+        // Add penalty time
+        if (penaltyAlert.timeAddedMinutes) {
+          const additionalSeconds = penaltyAlert.timeAddedMinutes * 60;
+          setTimeRemaining(prev => prev + additionalSeconds);
+          totalDurationRef.current += additionalSeconds;
+        }
+        setIsRunning(false);
+        break;
+    }
+
+    setPenaltyAlert(null);
+    setPendingAction(null);
+  };
+
+   // 🆕 Handle penalty alert cancel (only for warnings)
+  const handlePenaltyCancel = () => {
+    setPenaltyAlert(null);
+    setPendingAction(null);
+    // Don't pause/stop - user cancelled
+  };
+
+  const handleStartBreak = () => {
+    setCurrentPhase('break');
+    const secs = breakDuration * 60;
+    setTimeRemaining(secs);
+    totalDurationRef.current = secs;
+    progressAnim.setValue(0);
+    circleOpacity.setValue(1);
+    setIsRunning(true);
+  };
+
+  // 🎯 COMPUTED VALUES
+  const displayMinutes = Math.floor(timeRemaining / 60);
+  const displaySeconds = timeRemaining % 60;
+  const displayTime = currentPhase === 'idle' 
+    ? focusDuration 
+    : `${displayMinutes}:${displaySeconds.toString().padStart(2, '0')}`;
+
+  const timerMessage = useMemo(() => {
+    if (currentPhase === 'idle') {
+      return `${focusDuration} min focus • ${breakDuration} min break`;
+    } else if (currentPhase === 'focus') {
+      return isRunning ? 'Stay focused!' : 'Focus paused';
+    } else {
+      return isRunning ? 'Take a break' : 'Break paused';
+    }
+  }, [currentPhase, focusDuration, breakDuration, isRunning]);
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.logo}>Pomodoom</Text>
-        <Text style={styles.heading}>Focus Timer</Text>
-        <Text style={styles.subhead}>Pick an interval and start</Text>
-      </View>
-
-      <View style={styles.timerCard}>
-        <View style={styles.timerCircleOuter}>
-          <View style={styles.timerCircleInner}>
-            <Text style={styles.timerValue}>{selectedDuration}</Text>
-            <Text style={styles.timerLabel}>minutes</Text>
-          </View>
+    <LinearGradient
+      colors={[colors.gradientStart, colors.gradientMid, colors.gradientEnd]}
+      style={{ flex: 1 }}
+    >
+      <SafeAreaView style={styles.container}>
+        <View style={styles.headerRow}>
+          <Text style={styles.heading}>
+            {currentPhase === 'focus' ? 'Focus Mode' : 
+             currentPhase === 'break' ? 'Break Time' : 
+             'Ready to Focus?'}
+          </Text>
+          <Text style={styles.subhead}>
+            {currentPhase === 'idle' ? 'Pick your intervals and start' : ''}
+            </Text>
         </View>
-        <Text style={styles.timerMessage}>{timerMessage}</Text>
-        <TouchableOpacity style={styles.primaryButton}>
-          <Text style={styles.primaryButtonText}>Start focus</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButton} onPress={handleComplete}>
-          <Text style={styles.secondaryButtonText}>Mark complete</Text>
-        </TouchableOpacity>
-      </View>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Preset intervals</Text>
-        <FlatList
-          horizontal
-          data={focusDurationsMinutes}
-          keyExtractor={(item) => item.toString()}
-          contentContainerStyle={{ gap: spacing.sm }}
-          showsHorizontalScrollIndicator={false}
-          renderItem={({ item }) => {
-            const isActive = item === selectedDuration;
-            return (
-              <TouchableOpacity
-                style={[styles.chip, isActive && styles.chipActive]}
-                onPress={() => setSelectedDuration(item)}
+        {/* 🎯 TIMER DISPLAY CARD */}
+        <View style={styles.timerCard}>
+          <Animated.View style={[
+            styles.timerCircleOuter,
+            currentPhase === 'focus' && styles.timerCircleFocus,
+            currentPhase === 'break' && styles.timerCircleBreak,
+            { opacity: circleOpacity },
+          ]}>
+            {/* progress circle */}
+            {currentPhase !== 'idle' && (
+              <AnimatedSvg
+                width={CIRCLE_RADIUS * 2}
+                height={CIRCLE_RADIUS * 2}
+                style={StyleSheet.absoluteFill}
               >
-                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{item}m</Text>
+                <AnimatedCircle
+                  cx={CIRCLE_RADIUS}
+                  cy={CIRCLE_RADIUS}
+                  r={CIRCLE_RADIUS - STROKE_WIDTH / 2}
+                  stroke={currentPhase === 'focus' ? colors.primary : colors.success}
+                  strokeWidth={STROKE_WIDTH}
+                  strokeDasharray={`${circumference} ${circumference}`}
+                  strokeDashoffset={dashOffset}
+                  strokeLinecap="round"
+                  rotation="-90"
+                  originX={CIRCLE_RADIUS}
+                  originY={CIRCLE_RADIUS}
+                />
+              </AnimatedSvg>
+            )}
+            <View style={styles.timerCircleInner}>
+              <Text style={styles.timerValue}>{displayTime}</Text>
+              <Text style={styles.timerLabel}>
+                {currentPhase === 'idle' ? 'minutes' : ''}
+              </Text>
+            </View>
+          </Animated.View>
+          
+          <Text style={styles.timerMessage}>{timerMessage}</Text>
+
+          {/* 🎯 TIMER CONTROLS */}
+          {currentPhase === 'idle' ? (
+            <>
+              <TouchableOpacity 
+                style={styles.primaryButton}
+                onPress={handleStart}
+              >
+                <Text style={styles.primaryButtonText}>Start Focus</Text>
               </TouchableOpacity>
-            );
-          }}
+            </>
+          ) : (
+            <View style={styles.controlRow}>
+              {isRunning ? (
+                <TouchableOpacity 
+                  style={styles.controlButton}
+                  onPress={handlePause}
+                >
+                  <Ionicons name="pause" size={24} color={colors.primary} />
+                  <Text style={styles.controlButtonText}>Pause</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.controlButton}
+                  onPress={handleStart}
+                >
+                  <Ionicons name="play" size={24} color={colors.primary} />
+                  <Text style={styles.controlButtonText}>Resume</Text>
+                </TouchableOpacity>
+              )}
+              
+              <TouchableOpacity 
+                style={styles.controlButton}
+                onPress={handleStop}
+              >
+                <Ionicons name="stop" size={24} color={colors.danger} />
+                <Text style={styles.controlButtonText}>Stop</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+        {/* Break button (only show after focus complete) */}
+          {currentPhase === 'idle' && (
+            <TouchableOpacity 
+              style={styles.secondaryButton} 
+              onPress={handleStartBreak}
+            >
+              <Text style={styles.secondaryButtonText}>Start Break</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* 🎯 FOCUS DURATION SELECTOR - Only show when idle */}
+        {currentPhase === 'idle' && (
+          <>
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="timer-outline" size={20} color={colors.primary} />
+                <Text style={styles.sectionTitle}>Focus Duration</Text>
+              </View>
+              <View style={styles.chipsContainer}>
+                {focusDurationsMinutes.map((item) => {
+                  const isActive = item === focusDuration;
+                  return (
+                    <TouchableOpacity
+                      key={item}
+                      style={[styles.chip, isActive && styles.chipActive]}
+                      onPress={() => setFocusDuration(item)}
+                    >
+                      <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                        {item}m
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </>
+        )}
+
+        {/* 🆕 Penalty Alert Modal */}
+        <PenaltyAlert
+          visible={penaltyAlert !== null}
+          penaltyType={penaltyAlert?.type || 'warning'}
+          message={penaltyAlert?.message || ''}
+          onConfirm={handlePenaltyConfirm}
+          onCancel={penaltyAlert?.type === 'warning' ? handlePenaltyCancel : undefined}
+          showCancel={penaltyAlert?.type === 'warning'}
         />
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
     padding: spacing.xl,
     gap: spacing.xl,
   },
   headerRow: {
     gap: spacing.xs,
-  },
-   logo: {
-    alignSelf: 'center',
-    fontSize: 40,
-    fontWeight: '800',
-    color: colors.primaryDark,
-    marginBottom: spacing.lg * 2, // 🔄 Increased bottom margin for better spacing with the illustration
-    marginTop: 40, // 🔄 Increased top margin for better spacing with the illustration
+    marginTop: spacing.xxl*2,
   },
   heading: {
     color: colors.textPrimary,
     fontSize: 24,
     fontWeight: '800',
+    alignSelf: 'center',
   },
   subhead: {
     color: colors.textSecondary,
     fontSize: 15,
+    alignSelf: 'center',
   },
   timerCard: {
     backgroundColor: colors.card,
@@ -131,6 +504,15 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 6,
   },
+  // 🆕 Different colors for different phases
+  timerCircleFocus: {
+    shadowColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  timerCircleBreak: {
+    shadowColor: colors.success,
+    borderColor: colors.success,
+  },
   timerCircleInner: {
     width: 170,
     height: 170,
@@ -152,6 +534,29 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 15,
   },
+
+  // 🆕 Control buttons row
+  controlRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+  },
+  controlButton: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  controlButtonText: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
   primaryButton: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.lg,
@@ -195,10 +600,20 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 6,
   },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   sectionTitle: {
     color: colors.textPrimary,
     fontWeight: '700',
     fontSize: 16,
+  },
+  chipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   chip: {
     paddingHorizontal: spacing.lg,

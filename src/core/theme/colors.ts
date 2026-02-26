@@ -7,7 +7,7 @@ export const colors = {
 	// Primary colors
 	primary: '#6BB4E8',
 	primaryDeep: '#1883f1',
-	primaryDark: '#00213f',
+	primaryDark: '#00376b',
 	primaryLight: '#A8D5FF',
 	// Backgrounds
 	background: '#F5F9FF',
@@ -20,8 +20,9 @@ export const colors = {
 	white: '#FFFFFF',
 	// Accents
 	accent: '#6BB4E8',
-	danger: '#F87171',
+	danger: '#E74C3C',
 	success: '#34D399',
 	border: 'rgba(45,95,141,0.15)',
 	shadow: 'rgba(107,180,232,0.2)',
+	warning: '#F39C12',
 };

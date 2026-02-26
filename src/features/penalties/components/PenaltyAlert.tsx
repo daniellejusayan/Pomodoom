@@ -1,0 +1,211 @@
+import React from 'react';
+import {
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Animated,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../../core/theme/colors';
+import { spacing } from '../../../core/theme/spacing';
+import type { PenaltyType } from '../types/PenaltyTypes';
+
+interface PenaltyAlertProps {
+  visible: boolean;
+  penaltyType: PenaltyType;
+  message: string;
+  onConfirm: () => void;
+  onCancel?: () => void;
+  showCancel?: boolean;
+}
+
+export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
+  visible,
+  penaltyType,
+  message,
+  onConfirm,
+  onCancel,
+  showCancel = true,
+}) => {
+  const scaleAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      scaleAnim.setValue(0);
+    }
+  }, [visible]);
+
+  // Get icon and color based on penalty type
+  const getAlertStyle = () => {
+    switch (penaltyType) {
+      case 'warning':
+        return {
+          icon: 'alert-circle' as const,
+          iconColor: colors.warning || '#F39C12',
+          title: 'Warning',
+        };
+      case 'resetTimer':
+        return {
+          icon: 'refresh-circle' as const,
+          iconColor: colors.danger || '#E74C3C',
+          title: 'Timer Reset',
+        };
+      case 'addTime':
+        return {
+          icon: 'time' as const,
+          iconColor: colors.warning || '#F39C12',
+          title: 'Time Added',
+        };
+      default:
+        return {
+          icon: 'information-circle' as const,
+          iconColor: colors.primary,
+          title: 'Notice',
+        };
+    }
+  };
+
+  const alertStyle = getAlertStyle();
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+    >
+      <View style={styles.overlay}>
+        <Animated.View
+          style={[
+            styles.alertContainer,
+            { transform: [{ scale: scaleAnim }] },
+          ]}
+        >
+          {/* Icon */}
+          <View style={[styles.iconContainer, { backgroundColor: `${alertStyle.iconColor}20` }]}>
+            <Ionicons
+              name={alertStyle.icon}
+              size={48}
+              color={alertStyle.iconColor}
+            />
+          </View>
+
+          {/* Title */}
+          <Text style={styles.title}>{alertStyle.title}</Text>
+
+          {/* Message */}
+          <Text style={styles.message}>{message}</Text>
+
+          {/* Buttons */}
+          <View style={styles.buttonRow}>
+            {showCancel && onCancel && (
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={onCancel}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            )}
+            
+            <TouchableOpacity
+              style={[
+                styles.button,
+                styles.confirmButton,
+                { backgroundColor: alertStyle.iconColor },
+                !showCancel && { flex: 1 },
+              ]}
+              onPress={onConfirm}
+            >
+              <Text style={styles.confirmButtonText}>
+                {penaltyType === 'warning' && showCancel ? 'Continue' : 'OK'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  alertContainer: {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: spacing.xl,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    gap: spacing.md,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 30,
+    elevation: 10,
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  message: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+    marginTop: spacing.md,
+  },
+  button: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cancelButtonText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  confirmButton: {
+    // Background color set dynamically
+  },
+  confirmButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+});

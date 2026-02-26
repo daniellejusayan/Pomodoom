@@ -1,11 +1,13 @@
 import { useNavigation } from '@react-navigation/native';
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Image} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient'; // Optional: For a nice background gradient
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
 import { ROUTES } from '../../../navigation/routes';
-import type { TimerStackParamList } from '../../../navigation/types';
+import type { BottomTabParamList, TimerStackParamList } from '../../../navigation/types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type Nav = NativeStackNavigationProp<TimerStackParamList, typeof ROUTES.TIMER.SESSION_COMPLETE>;
@@ -17,92 +19,176 @@ export default function SessionCompleteScreen() {
     navigation.navigate(ROUTES.TIMER.HOME);
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Session complete!</Text>
-        <Text style={styles.subtitle}>Nice work. Here’s your quick recap.</Text>
+  const handleViewStats = () => {
+    navigation
+      .getParent<BottomTabNavigationProp<BottomTabParamList>>()
+      ?.navigate(ROUTES.TABS.STATISTICS);
+  };
 
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>25m</Text>
-            <Text style={styles.statLabel}>Focus</Text>
+   return (
+    <LinearGradient
+      colors={[colors.gradientStart, colors.gradientMid, colors.gradientEnd]}
+      style={{ flex: 1 }}
+    >
+      <SafeAreaView style={styles.container}>
+        {/* 🆕 ADDED: Pomodoom title at top */}
+        <Text style={styles.appTitle}>Pomodoom</Text>
+
+        <View style={styles.content}>
+          {/* 🆕 ADDED: White card container for all content */}
+          <View style={styles.card}>
+            
+            {/* 🆕 ADDED: Celebration illustration */}
+            <View style={styles.illustrationContainer}>
+              <Image
+                source={require('../../../../assets/sitting_tomato_completed.png')}
+                style={styles.illustration}
+                resizeMode="contain"
+              />
+            </View>
+
+            {/* 🔄 CHANGED: Title and subtitle layout */}
+            <Text style={styles.title}>Session Complete!</Text>
+            <Text style={styles.subtitle}>
+              Great job! You nailed that{'\n'}focus session.
+            </Text>
+
+            {/* 🔄 CHANGED: Stats now in vertical list format with labels on left */}
+            <View style={styles.statsContainer}>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Focus Duration:</Text>
+                <Text style={styles.statValue}>25 minutes</Text>
+              </View>
+
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Interruptions:</Text>
+                <Text style={styles.statValue}>0</Text>
+              </View>
+
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Penalties:</Text>
+                <Text style={styles.statValue}>None</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>5m</Text>
-            <Text style={styles.statLabel}>Break</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>3</Text>
-            <Text style={styles.statLabel}>Pomodoros</Text>
+
+          {/* 🆕 ADDED: Buttons outside the white card */}
+          <View style={styles.buttonsContainer}>
+            {/* Primary Button - Return to Home */}
+            <TouchableOpacity 
+              style={styles.primaryButton} 
+              onPress={handleBackHome}
+            >
+              <Text style={styles.primaryButtonText}>Return to Home</Text>
+            </TouchableOpacity>
+
+            {/* 🆕 ADDED: Secondary Button - View Statistics */}
+            <TouchableOpacity 
+              style={styles.secondaryButton} 
+              onPress={handleViewStats}
+            >
+              <Text style={styles.secondaryButtonText}>View Statistics</Text>
+            </TouchableOpacity>
           </View>
         </View>
-
-        <TouchableOpacity style={styles.primaryButton} onPress={handleBackHome}>
-          <Text style={styles.primaryButtonText}>Back to timer</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent', // Gradient background
     padding: spacing.xl,
     justifyContent: 'center',
   },
+
+  // 🆕 ADDED: App title at top
+  appTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: colors.primary,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+  },
+
+  // 🆕 ADDED: Content wrapper for centering
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    gap: spacing.lg,
+  },
+
   card: {
     backgroundColor: colors.card,
     borderRadius: 20,
     padding: spacing.xl,
-    gap: spacing.lg,
+    alignItems: 'center', // Center content horizontally
+    gap: spacing.md,
     shadowColor: colors.shadow,
     shadowOpacity: 0.25,
     shadowOffset: { width: 0, height: 14 },
     shadowRadius: 24,
     elevation: 10,
   },
+
+    // 🆕 ADDED: Illustration container
+  illustrationContainer: {
+    width: 360,
+    height: 180,
+    marginBottom: spacing.sm,
+  },
+
+  // 🆕 ADDED: Illustration image
+  illustration: {
+    width: '100%',
+    height: '100%',
+  },
+
   title: {
     color: colors.textPrimary,
-    fontSize: 24,
+    fontSize: 24, 
     fontWeight: '800',
+    textAlign: 'center', // Centered text
   },
   subtitle: {
     color: colors.textSecondary,
-    fontSize: 15,
+    fontSize: 15, // Slightly smaller than before (15 -> 14)
     lineHeight: 20,
+    textAlign: 'center', // Centered text
+    marginBottom: spacing.sm, // space before states
   },
-  statsRow: {
+    // 🔄 CHANGED: Stats container - now vertical list instead of horizontal boxes
+  statsContainer: {
+    width: '100%',
+    gap: spacing.md,
+  },
+  statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: spacing.lg,
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
+    alignItems: 'center', // Align items vertically centered
   },
   statValue: {
     color: colors.textPrimary,
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '700',
   },
   statLabel: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    letterSpacing: 0.2,
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+
+  buttonsContainer: {
+    gap: spacing.md,
   },
   primaryButton: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.lg,
-    borderRadius: 14,
+    paddingHorizontal: spacing.xl, // 🆕 ADDED: Horizontal padding
+    borderRadius: 999, // 🔄 CHANGED: From 14 to 999 (pill shape)
     alignItems: 'center',
     shadowColor: colors.primary,
     shadowOpacity: 0.35,
@@ -113,6 +199,22 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#fff',
     fontWeight: '700',
+    fontSize: 16,
+  },
+  // 🆕 ADDED: Secondary button (View Statistics)
+  secondaryButton: {
+    backgroundColor: colors.background, // Semi-transparent white
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 999, // Pill shape
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  // 🆕 ADDED: Secondary button text
+  secondaryButtonText: {
+    color: colors.primary,
+    fontWeight: '600',
     fontSize: 16,
   },
 });
