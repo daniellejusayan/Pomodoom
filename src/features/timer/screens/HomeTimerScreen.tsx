@@ -66,6 +66,7 @@ export default function HomeTimerScreen() {
   const { penaltyType: currentPenaltyType } = useSettings();
   const [penaltyAlert, setPenaltyAlert] = useState<PenaltyAction | null>(null);
   const [pendingAction, setPendingAction] = useState<'pause' | 'stop' | null>(null);
+  const [sessionStopCount, setSessionStopCount] = useState(0); // 🆕 Track stop attempts in current session
   const sessionIdRef = useRef<string>(Date.now().toString());
 
 
@@ -160,6 +161,7 @@ export default function HomeTimerScreen() {
       totalDurationRef.current = secs;
       progressAnim.setValue(0);
       circleOpacity.setValue(1);
+      setSessionStopCount(0); // 🆕 Reset stop count on new session
       setIsRunning(true);
     } else {
       // Resume paused timer
@@ -183,7 +185,7 @@ export default function HomeTimerScreen() {
 // 🔄 MODIFIED: handleStop with penalty
   const handleStop = () => {
     setPendingAction('stop');
-    const penalty = applyPenalty(sessionIdRef.current, 'stop');
+    const penalty = applyPenalty(sessionIdRef.current, 'stop', sessionStopCount);
     
     if (penalty) {
       setPenaltyAlert(penalty);
@@ -201,6 +203,7 @@ export default function HomeTimerScreen() {
     progressAnim.setValue(0);
     circleOpacity.setValue(1);
     resetSessionPenalties();
+    setSessionStopCount(0); // 🆕 Reset stop count when returning to home timer
   };
 
 // 🔄 MODIFIED: handleTimerComplete - reset penalties on successful completion
@@ -248,22 +251,30 @@ export default function HomeTimerScreen() {
         break;
 
       case 'resetTimer':
-        // Reset timer to original duration
-        const secs = focusDuration * 60;
-        setTimeRemaining(secs);
-        totalDurationRef.current = secs;
-        progressAnim.setValue(0);
-        setIsRunning(false);
+        if (pendingAction === 'stop') {
+          executeStop();
+        } else {
+          // Reset timer to original duration
+          const secs = focusDuration * 60;
+          setTimeRemaining(secs);
+          totalDurationRef.current = secs;
+          progressAnim.setValue(0);
+          setIsRunning(false);
+        }
         break;
 
       case 'addTime':
-        // Add penalty time
-        if (penaltyAlert.timeAddedMinutes) {
-          const additionalSeconds = penaltyAlert.timeAddedMinutes * 60;
-          setTimeRemaining(prev => prev + additionalSeconds);
-          totalDurationRef.current += additionalSeconds;
+        if (pendingAction === 'stop') {
+          executeStop();
+        } else {
+          // Add penalty time
+          if (penaltyAlert.timeAddedMinutes) {
+            const additionalSeconds = penaltyAlert.timeAddedMinutes * 60;
+            setTimeRemaining(prev => prev + additionalSeconds);
+            totalDurationRef.current += additionalSeconds;
+          }
+          setIsRunning(false);
         }
-        setIsRunning(false);
         break;
     }
 
@@ -287,6 +298,37 @@ export default function HomeTimerScreen() {
     circleOpacity.setValue(1);
     setIsRunning(true);
   };
+
+  // 🆕 Add handler for "Go Back" button
+const handlePenaltyGoBack = () => {
+  // Capture penalty details before clearing alert
+  const type = penaltyAlert?.type;
+  const added = penaltyAlert?.timeAddedMinutes;
+
+  // Close the penalty alert
+  setPenaltyAlert(null);
+  setPendingAction(null);
+  // 🆕 Increment stop count when user resumes after penalty
+  setSessionStopCount(prev => prev + 1);
+
+  if (type === 'resetTimer') {
+    // Reset timer to original duration, but stay on the timer screen
+    const secs = focusDuration * 60;
+    setTimeRemaining(secs);
+    totalDurationRef.current = secs;
+    progressAnim.setValue(0);
+    setIsRunning(false);
+  } else if (type === 'addTime' && added) {
+    // Add penalty time then resume
+    const additionalSeconds = added * 60;
+    setTimeRemaining(prev => prev + additionalSeconds);
+    totalDurationRef.current += additionalSeconds;
+    setIsRunning(true);
+  } else {
+    // Resume the timer for other penalty types or warnings
+    setIsRunning(true);
+  }
+};
 
   // 🎯 COMPUTED VALUES
   const displayMinutes = Math.floor(timeRemaining / 60);
@@ -447,8 +489,15 @@ export default function HomeTimerScreen() {
           penaltyType={penaltyAlert?.type || 'warning'}
           message={penaltyAlert?.message || ''}
           onConfirm={handlePenaltyConfirm}
-          onCancel={penaltyAlert?.type === 'warning' ? handlePenaltyCancel : undefined}
-          showCancel={penaltyAlert?.type === 'warning'}
+          onCancel={
+          // 🔧 FIX: For PAUSE with WARNING penalty, show Cancel button
+          pendingAction === 'pause' && currentPenaltyType === 'warning' ? handlePenaltyCancel : undefined }
+          // 🔧 FIX: Only show Cancel for PAUSE with WARNING penalty
+          showCancel={
+          pendingAction === 'pause' && currentPenaltyType === 'warning'}
+          // 🆕 ADDED: Pass stop action props
+          isStopAction={pendingAction === 'stop'}
+          onGoBack={pendingAction === 'stop' ? handlePenaltyGoBack : undefined}
         />
       </SafeAreaView>
     </LinearGradient>

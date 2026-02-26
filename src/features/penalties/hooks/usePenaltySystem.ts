@@ -37,7 +37,9 @@ export const usePenaltySystem = () => {
         return "You chose to stop your session. As a penalty, you will have to reset the timer for this session.";
       
       case 'addTime':
-        return `Session paused. As a penalty, ${timeAdded} minutes have been added to your timer.`;
+        return reason === 'pause'
+          ? `Session paused. As a penalty, ${timeAdded} minutes have been added to your timer.`
+          : `You chose to stop your session. As a penalty, ${timeAdded} minutes were added before returning to Home Timer.`;
       
       default:
         return "Session interrupted.";
@@ -68,7 +70,8 @@ export const usePenaltySystem = () => {
   // 🎯 Apply penalty and return action to take
   const applyPenalty = useCallback((
     sessionId: string,
-    reason: 'pause' | 'stop'
+    reason: 'pause' | 'stop',
+    stopCount: number = 0 // 🆕 ADDED: Track stop attempts for escalation
   ): PenaltyAction | null => {
     // Log the penalty application for debugging
     console.log('Applying penalty:', penaltyType, 'for reason:', reason);
@@ -96,21 +99,26 @@ export const usePenaltySystem = () => {
         };
 
       case 'addTime':
-        if (reason === 'pause') {
-          const timeAdded = calculateTimePenalty(sessionPauseCount);
-          return {
-            type: 'addTime',
-            message: getPenaltyMessage('addTime', reason, timeAdded),
-            timeAddedMinutes: timeAdded,
-            pauseCount: sessionPauseCount + 1,
-          };
+        let timeAdded: number;
+        if (reason === 'stop') {
+          // 🆕 ESCALATION for stop action: 2 min → 5 min → 10 min → 10 min ...
+          if (stopCount === 0) {
+            timeAdded = 2;
+          } else if (stopCount === 1) {
+            timeAdded = 5;
+          } else {
+            timeAdded = 10;
+          }
         } else {
-          // Stop action with addTime penalty = reset timer
-          return {
-            type: 'resetTimer',
-            message: getPenaltyMessage('resetTimer', reason),
-          };
+          // Original pause escalation
+          timeAdded = calculateTimePenalty(sessionPauseCount);
         }
+        return {
+          type: 'addTime',
+          message: getPenaltyMessage('addTime', reason, timeAdded),
+          timeAddedMinutes: timeAdded,
+          pauseCount: reason === 'pause' ? sessionPauseCount + 1 : sessionPauseCount,
+        };
 
       default:
         return null;
