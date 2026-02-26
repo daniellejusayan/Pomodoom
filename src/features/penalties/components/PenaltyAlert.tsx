@@ -122,7 +122,7 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
                 ]}
                 onPress={onConfirm}
               >
-                <Text style={styles.confirmButtonText}>Go to Home Timer</Text>
+                <Text style={styles.confirmButtonText}>Finish Session</Text>
               </TouchableOpacity>
 
               <TouchableOpacity

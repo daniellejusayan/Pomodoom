@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 
-import { focusDurationsMinutes, defaultFocusMinutes, defaultBreakMinutes } from '../../../core/constants';
+import { focusDurationsMinutes } from '../../../core/constants';
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
 import { ROUTES } from '../../../navigation/routes';
@@ -38,9 +38,8 @@ export default function HomeTimerScreen() {
   const [isRunning, setIsRunning] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0); // in seconds
 
-  // 🎯 DURATION SETTINGS - User-selected intervals
-  const [focusDuration, setFocusDuration] = useState<number>(defaultFocusMinutes);
-  const [breakDuration, setBreakDuration] = useState<number>(defaultBreakMinutes);
+  // 🎯 DURATION SETTINGS - pulled from shared context
+  const { focusDuration, breakDuration, setFocusDuration, setBreakDuration } = useSettings();
 
   // 🆕 PROGRESS ANIMATION
   const progressAnim = useRef(new Animated.Value(0)).current;              // 0..1
@@ -63,7 +62,17 @@ export default function HomeTimerScreen() {
     penaltyType: hookPenaltyType,
   } = usePenaltySystem();
   
-  const { penaltyType: currentPenaltyType } = useSettings();
+  const {
+    penaltyType: currentPenaltyType,
+    breakCycleCount,
+    longBreaksCompleted,
+    longBreakDuration,
+    incrementBreakCycle,
+    resetBreakCycle,
+    incrementLongBreaks,
+    incrementSessions,
+  } = useSettings();
+
   const [penaltyAlert, setPenaltyAlert] = useState<PenaltyAction | null>(null);
   const [pendingAction, setPendingAction] = useState<'pause' | 'stop' | null>(null);
   const [sessionStopCount, setSessionStopCount] = useState(0); // 🆕 Track stop attempts in current session
@@ -190,20 +199,29 @@ export default function HomeTimerScreen() {
     if (penalty) {
       setPenaltyAlert(penalty);
     } else {
-      // No penalty set, stop immediately
-      executeStop();
+      // No penalty set, finish session immediately
+      finishSession();
     }
   };
 
-  // 🆕 Execute stop action
-  const executeStop = () => {
+  // 🆕 Finish current focus session (presence of penalty handled separately)
+  const finishSession = () => {
+    // increment session count for stats
+    incrementSessions();
+    // navigate to summary
+    navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, {
+      sessionId: sessionIdRef.current,
+    });
+    // then reset internal state similar to executeStop
     setIsRunning(false);
     setCurrentPhase('idle');
     setTimeRemaining(0);
     progressAnim.setValue(0);
     circleOpacity.setValue(1);
     resetSessionPenalties();
-    setSessionStopCount(0); // 🆕 Reset stop count when returning to home timer
+    setSessionStopCount(0);
+    // new session id prepared for next session
+    sessionIdRef.current = Date.now().toString();
   };
 
 // 🔄 MODIFIED: handleTimerComplete - reset penalties on successful completion
@@ -222,6 +240,8 @@ export default function HomeTimerScreen() {
     if (currentPhase === 'focus') {
       // Reset penalties on successful completion
       resetSessionPenalties();
+      // count session
+      incrementSessions();
       
       navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, { 
         sessionId: sessionIdRef.current,
@@ -231,6 +251,14 @@ export default function HomeTimerScreen() {
       // Generate new session ID for next session
       sessionIdRef.current = Date.now().toString();
     } else if (currentPhase === 'break') {
+      // update break cycle/long break stats
+      if (breakCycleCount >= 2) {
+        // just finished a long break
+        incrementLongBreaks();
+        resetBreakCycle();
+      } else {
+        incrementBreakCycle();
+      }
       setCurrentPhase('idle');
       setTimeRemaining(0);
     }
@@ -246,13 +274,13 @@ export default function HomeTimerScreen() {
         if (pendingAction === 'pause') {
           setIsRunning(false);
         } else if (pendingAction === 'stop') {
-          executeStop();
+          finishSession();
         }
         break;
 
       case 'resetTimer':
         if (pendingAction === 'stop') {
-          executeStop();
+          finishSession();
         } else {
           // Reset timer to original duration
           const secs = focusDuration * 60;
@@ -265,7 +293,7 @@ export default function HomeTimerScreen() {
 
       case 'addTime':
         if (pendingAction === 'stop') {
-          executeStop();
+          finishSession();
         } else {
           // Add penalty time
           if (penaltyAlert.timeAddedMinutes) {
@@ -289,9 +317,12 @@ export default function HomeTimerScreen() {
     // Don't pause/stop - user cancelled
   };
 
+  const isNextBreakLong = breakCycleCount >= 2; // compute eligibility
+
   const handleStartBreak = () => {
     setCurrentPhase('break');
-    const secs = breakDuration * 60;
+    // determine duration: if eligible for long break
+    const secs = (isNextBreakLong ? longBreakDuration : breakDuration) * 60;
     setTimeRemaining(secs);
     totalDurationRef.current = secs;
     progressAnim.setValue(0);
@@ -450,7 +481,9 @@ const handlePenaltyGoBack = () => {
               style={styles.secondaryButton} 
               onPress={handleStartBreak}
             >
-              <Text style={styles.secondaryButtonText}>Start Break</Text>
+              <Text style={styles.secondaryButtonText}>
+                {isNextBreakLong ? 'Start Long Break' : 'Start Break'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>

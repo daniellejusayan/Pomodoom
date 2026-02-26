@@ -11,13 +11,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
+import { useSettings } from '../../../context/SettingsContext';
 
-// 🎯 Sample data - Replace with real data from context/storage
-const statsCards = [
-  { label: 'Total Sessions', value: '42' },
-  { label: "Today's Focus", value: '1h 30m' },
-  { label: 'Weekly Average', value: '2h 10m' },
-];
+// 🎯 Sample data placeholders - real values fetched from context/storage below
 
 const weeklyData = [
   { day: 'Mon', hours: 2, label: '2h' },
@@ -38,6 +34,19 @@ const dailySessionsData = Array.from({ length: 30 }, (_, i) => ({
 const { width } = Dimensions.get('window');
 
 export default function StatisticsScreen() {
+  const {
+    breakCycleCount,
+    longBreaksCompleted,
+    focusDuration,
+    totalSessions,
+  } = useSettings();
+
+  // build stats cards dynamically
+  const statsCards = [
+    { label: 'Successful Focus Sessions', value: String(totalSessions) },
+    { label: 'Long Breaks Taken', value: String(longBreaksCompleted) },
+  ];
+
   // Calculate max hours for bar chart scaling
   const maxHours = Math.max(...weeklyData.map((d) => d.hours), 1);
 

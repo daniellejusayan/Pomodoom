@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const STORAGE_KEY = '@pomodoom_settings';
+
+const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+
 export type PenaltyType = 'warning' | 'resetTimer' | 'addTime';
 
 interface SettingsContextType {
@@ -16,6 +20,11 @@ interface SettingsContextType {
   soundEnabled: boolean;
   vibrationEnabled: boolean;
   
+  // Session statistics
+  breakCycleCount: number; // number of normal breaks since last long break
+  longBreaksCompleted: number;
+  totalSessions: number; // number of completed focus sessions
+
   // Update functions
   setFocusDuration: (duration: number) => Promise<void>;
   setBreakDuration: (duration: number) => Promise<void>;
@@ -23,21 +32,28 @@ interface SettingsContextType {
   setPenaltyType: (type: PenaltyType) => Promise<void>;
   setSoundEnabled: (enabled: boolean) => Promise<void>;
   setVibrationEnabled: (enabled: boolean) => Promise<void>;
-  
+
+  // Stats functions
+  incrementBreakCycle: () => Promise<void>;
+  resetBreakCycle: () => Promise<void>;
+  incrementLongBreaks: () => Promise<void>;
+  incrementSessions: () => Promise<void>;
   loading: boolean;
 }
 
-const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
-
-const STORAGE_KEY = '@pomodoom_settings';
-
+// Provider
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
+  // local state declarations
   const [focusDuration, setFocusDurationState] = useState(25);
   const [breakDuration, setBreakDurationState] = useState(5);
   const [longBreakDuration, setLongBreakDurationState] = useState(15);
   const [penaltyType, setPenaltyTypeState] = useState<PenaltyType>('warning');
   const [soundEnabled, setSoundEnabledState] = useState(true);
   const [vibrationEnabled, setVibrationEnabledState] = useState(true);
+  // stats
+  const [breakCycleCount, setBreakCycleCount] = useState(0);
+  const [longBreaksCompleted, setLongBreaksCompleted] = useState(0);
+  const [totalSessions, setTotalSessions] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Load settings from storage
@@ -56,6 +72,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         setPenaltyTypeState(settings.penaltyType ?? 'warning');
         setSoundEnabledState(settings.soundEnabled ?? true);
         setVibrationEnabledState(settings.vibrationEnabled ?? true);
+        setBreakCycleCount(settings.breakCycleCount ?? 0);
+        setLongBreaksCompleted(settings.longBreaksCompleted ?? 0);
+        setTotalSessions(settings.totalSessions ?? 0);
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -81,6 +100,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       penaltyType,
       soundEnabled,
       vibrationEnabled,
+      breakCycleCount,
+      longBreaksCompleted,
+      totalSessions,
     });
   };
 
@@ -93,6 +115,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       penaltyType,
       soundEnabled,
       vibrationEnabled,
+      breakCycleCount,
+      longBreaksCompleted,
+      totalSessions,
     });
   };
 
@@ -105,6 +130,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       penaltyType,
       soundEnabled,
       vibrationEnabled,
+      breakCycleCount,
+      longBreaksCompleted,
+      totalSessions,
     });
   };
 
@@ -117,6 +145,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       penaltyType: type,
       soundEnabled,
       vibrationEnabled,
+      breakCycleCount,
+      longBreaksCompleted,
+      totalSessions,
     });
   };
 
@@ -129,6 +160,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       penaltyType,
       soundEnabled: enabled,
       vibrationEnabled,
+      breakCycleCount,
+      longBreaksCompleted,
+      totalSessions,
     });
   };
 
@@ -141,6 +175,75 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       penaltyType,
       soundEnabled,
       vibrationEnabled: enabled,
+      breakCycleCount,
+      longBreaksCompleted,
+    });
+  };
+
+  const incrementBreakCycle = async () => {
+    setBreakCycleCount(prev => {
+      const next = prev + 1;
+      saveSettings({
+        focusDuration,
+        breakDuration,
+        longBreakDuration,
+        penaltyType,
+        soundEnabled,
+        vibrationEnabled,
+        breakCycleCount: next,
+        longBreaksCompleted,
+      });
+      return next;
+    });
+  };
+
+  const resetBreakCycle = async () => {
+    setBreakCycleCount(0);
+    await saveSettings({
+      focusDuration,
+      breakDuration,
+      longBreakDuration,
+      penaltyType,
+      soundEnabled,
+      vibrationEnabled,
+      breakCycleCount: 0,
+      longBreaksCompleted,
+    });
+  };
+
+  const incrementLongBreaks = async () => {
+    setLongBreaksCompleted(prev => {
+      const next = prev + 1;
+      saveSettings({
+        focusDuration,
+        breakDuration,
+        longBreakDuration,
+        penaltyType,
+        soundEnabled,
+        vibrationEnabled,
+        breakCycleCount,
+        longBreaksCompleted: next,
+        totalSessions,
+      });
+      return next;
+    });
+  };
+
+  const incrementSessions = async () => {
+    setTotalSessions(prev => {
+      const next = prev + 1;
+      saveSettings({
+        focusDuration,
+        breakDuration,
+        longBreakDuration,
+        penaltyType,
+        soundEnabled,
+        vibrationEnabled,
+        breakCycleCount,
+        longBreaksCompleted,
+        totalSessions: next,
+      });
+      return next;
     });
   };
 
@@ -153,12 +256,19 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         penaltyType,
         soundEnabled,
         vibrationEnabled,
+        breakCycleCount,
+        longBreaksCompleted,
+        totalSessions,
         setFocusDuration,
         setBreakDuration,
         setLongBreakDuration,
         setPenaltyType,
         setSoundEnabled,
         setVibrationEnabled,
+        incrementBreakCycle,
+        resetBreakCycle,
+        incrementLongBreaks,
+        incrementSessions,
         loading,
       }}
     >
