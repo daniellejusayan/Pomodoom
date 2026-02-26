@@ -25,6 +25,7 @@ import { PenaltyAlert } from '../../penalties/components/PenaltyAlert';
 import type { PenaltyAction } from '../../penalties/types/PenaltyTypes';
 import { AppState, AppStateStatus } from 'react-native';
 import { useSettings } from '../../../context/SettingsContext';
+import { playAlarm, triggerVibration } from '../../../core/utils/alerts';
 
 type Nav = NativeStackNavigationProp<TimerStackParamList, typeof ROUTES.TIMER.HOME>;
 type TimerPhase = 'idle' | 'focus' | 'break';
@@ -71,6 +72,8 @@ export default function HomeTimerScreen() {
     resetBreakCycle,
     incrementLongBreaks,
     incrementSessions,
+    soundEnabled,
+    vibrationEnabled,
   } = useSettings();
 
   const [penaltyAlert, setPenaltyAlert] = useState<PenaltyAction | null>(null);
@@ -224,10 +227,18 @@ export default function HomeTimerScreen() {
     sessionIdRef.current = Date.now().toString();
   };
 
-// 🔄 MODIFIED: handleTimerComplete - reset penalties on successful completion
-  const handleTimerComplete = () => {
+// 🔄 MODIFIED: handleTimerComplete - reset penalties on successful completion, play sound & vibration
+  const handleTimerComplete = async () => {
     setIsRunning(false);
     progressAnim.setValue(0);
+    
+    // 🆕 Play sound and vibration if enabled
+    if (soundEnabled) {
+      await playAlarm();
+    }
+    if (vibrationEnabled) {
+      triggerVibration();
+    }
     
     setTimeout(() => {
       Animated.timing(circleOpacity, {

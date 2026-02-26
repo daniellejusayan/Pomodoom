@@ -8,6 +8,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export type PenaltyType = 'warning' | 'resetTimer' | 'addTime';
 
 interface SettingsContextType {
+
   // Duration settings
   focusDuration: number;
   breakDuration: number;
@@ -24,6 +25,8 @@ interface SettingsContextType {
   breakCycleCount: number; // number of normal breaks since last long break
   longBreaksCompleted: number;
   totalSessions: number; // number of completed focus sessions
+  firstUseDate: string | null; // ISO date string
+  dailySessions: { [date: string]: number }; // sessions count per day
 
   // Update functions
   setFocusDuration: (duration: number) => Promise<void>;
@@ -38,8 +41,11 @@ interface SettingsContextType {
   resetBreakCycle: () => Promise<void>;
   incrementLongBreaks: () => Promise<void>;
   incrementSessions: () => Promise<void>;
+  incrementDailySessions: () => Promise<void>;
   loading: boolean;
 }
+
+
 
 // Provider
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
@@ -54,6 +60,8 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const [breakCycleCount, setBreakCycleCount] = useState(0);
   const [longBreaksCompleted, setLongBreaksCompleted] = useState(0);
   const [totalSessions, setTotalSessions] = useState(0);
+  const [firstUseDate, setFirstUseDate] = useState<string | null>(null);
+  const [dailySessions, setDailySessions] = useState<{ [date: string]: number }>({});
   const [loading, setLoading] = useState(true);
 
   // Load settings from storage
@@ -75,6 +83,8 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         setBreakCycleCount(settings.breakCycleCount ?? 0);
         setLongBreaksCompleted(settings.longBreaksCompleted ?? 0);
         setTotalSessions(settings.totalSessions ?? 0);
+        setFirstUseDate(settings.firstUseDate ?? null);
+        setDailySessions(settings.dailySessions ?? {});
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -232,6 +242,10 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const incrementSessions = async () => {
     setTotalSessions(prev => {
       const next = prev + 1;
+      // set firstUseDate if absent
+      if (!firstUseDate) {
+        setFirstUseDate(new Date().toISOString());
+      }
       saveSettings({
         focusDuration,
         breakDuration,
@@ -242,8 +256,33 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         breakCycleCount,
         longBreaksCompleted,
         totalSessions: next,
+        firstUseDate: firstUseDate || new Date().toISOString(),
+        dailySessions,
       });
       return next;
+    });
+  };
+
+  // 🆕 Method to increment today's daily session count
+  const incrementDailySessions = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    setDailySessions(prev => {
+      const nextCount = (prev[today] || 0) + 1;
+      const updated = { ...prev, [today]: nextCount };
+      saveSettings({
+        focusDuration,
+        breakDuration,
+        longBreakDuration,
+        penaltyType,
+        soundEnabled,
+        vibrationEnabled,
+        breakCycleCount,
+        longBreaksCompleted,
+        totalSessions,
+        firstUseDate,
+        dailySessions: updated,
+      });
+      return updated;
     });
   };
 
@@ -259,6 +298,8 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         breakCycleCount,
         longBreaksCompleted,
         totalSessions,
+        firstUseDate,
+        dailySessions,
         setFocusDuration,
         setBreakDuration,
         setLongBreakDuration,
@@ -269,6 +310,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         resetBreakCycle,
         incrementLongBreaks,
         incrementSessions,
+        incrementDailySessions,
         loading,
       }}
     >
