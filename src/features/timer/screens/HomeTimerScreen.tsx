@@ -19,6 +19,12 @@ import { ROUTES } from '../../../navigation/routes';
 import { TimerStackParamList } from '../../../navigation/types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+// Add these imports at the top
+import { usePenaltySystem } from '../../penalties/hooks/usePenaltySystem';
+import { PenaltyAlert } from '../../penalties/components/PenaltyAlert';
+import type { PenaltyAction } from '../../penalties/types/PenaltyTypes';
+import { AppState, AppStateStatus } from 'react-native';
+
 type Nav = NativeStackNavigationProp<TimerStackParamList, typeof ROUTES.TIMER.HOME>;
 type TimerPhase = 'idle' | 'focus' | 'break';
 
@@ -47,6 +53,18 @@ export default function HomeTimerScreen() {
   });
   // 🆕 CIRCLE FADE ANIMATION for end-of-timer feedback
   const circleOpacity = useRef(new Animated.Value(1)).current;
+
+    // 🆕 Penalty system
+  const {
+    applyPenalty,
+    resetSessionPenalties,
+    sessionPauseCount,
+  } = usePenaltySystem();
+  
+  const [penaltyAlert, setPenaltyAlert] = useState<PenaltyAction | null>(null);
+  const [pendingAction, setPendingAction] = useState<'pause' | 'stop' | null>(null);
+  const sessionIdRef = useRef<string>(Date.now().toString());
+
 
   // 🎯 COUNTDOWN TIMER LOGIC
   useEffect(() => {
@@ -79,16 +97,48 @@ export default function HomeTimerScreen() {
     }
   }, [timeRemaining, currentPhase]);
 
+    // 🆕 Monitor app state for background detection
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, [isRunning, currentPhase]);
+
+  const handleAppStateChange = (nextAppState: AppStateStatus) => {
+    // If timer is running and app goes to background
+    if (
+      isRunning &&
+      currentPhase === 'focus' &&
+      nextAppState === 'background'
+    ) {
+      // Trigger penalty for going to background
+      const penalty = applyPenalty(sessionIdRef.current, 'pause');
+      if (penalty) {
+        if (penalty.type === 'addTime' && penalty.timeAddedMinutes) {
+          // Add time immediately for background interruption
+          const additionalSeconds = penalty.timeAddedMinutes * 60;
+          setTimeRemaining(prev => prev + additionalSeconds);
+          totalDurationRef.current += additionalSeconds;
+        }
+        // Pause the timer
+        setIsRunning(false);
+      }
+    }
+  };
+
+
   // 🎯 TIMER CONTROLS
   const handleStart = () => {
-// 🧪 TEMPORARY: Skip timer and go directly to Session Complete screen
-  // ⚠️ REMOVE THIS BLOCK TO RESTORE NORMAL TIMER FUNCTIONALITY
-  navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, { 
-    sessionId: Date.now().toString() 
-  });
-  return; // Exit early, skipping all the timer logic below
-  // ⚠️ END OF TEMPORARY CODE
-    if (currentPhase === 'idle') {
+// // 🧪 TEMPORARY: Skip timer and go directly to Session Complete screen
+//   // ⚠️ REMOVE THIS BLOCK TO RESTORE NORMAL TIMER FUNCTIONALITY
+//   navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, { 
+//     sessionId: Date.now().toString() 
+//   });
+//   return; // Exit early, skipping all the timer logic below
+//   // ⚠️ END OF TEMPORARY CODE
+      if (currentPhase === 'idle') {
+      // Create new session ID
+      sessionIdRef.current = Date.now().toString();
+      
       // Start new focus session
       setCurrentPhase('focus');
       const secs = focusDuration * 60;
@@ -103,22 +153,47 @@ export default function HomeTimerScreen() {
     }
   };
 
+// 🔄 MODIFIED: handlePause with penalty
   const handlePause = () => {
-    setIsRunning(false);
+    setPendingAction('pause');
+    const penalty = applyPenalty(sessionIdRef.current, 'pause');
+    
+    if (penalty) {
+      setPenaltyAlert(penalty);
+    } else {
+      // No penalty set, pause immediately
+      setIsRunning(false);
+    }
   };
 
+// 🔄 MODIFIED: handleStop with penalty
   const handleStop = () => {
+    setPendingAction('stop');
+    const penalty = applyPenalty(sessionIdRef.current, 'stop');
+    
+    if (penalty) {
+      setPenaltyAlert(penalty);
+    } else {
+      // No penalty set, stop immediately
+      executeStop();
+    }
+  };
+
+  // 🆕 Execute stop action
+  const executeStop = () => {
     setIsRunning(false);
     setCurrentPhase('idle');
     setTimeRemaining(0);
     progressAnim.setValue(0);
     circleOpacity.setValue(1);
+    resetSessionPenalties();
   };
 
+// 🔄 MODIFIED: handleTimerComplete - reset penalties on successful completion
   const handleTimerComplete = () => {
     setIsRunning(false);
     progressAnim.setValue(0);
-    // fade circle after delay
+    
     setTimeout(() => {
       Animated.timing(circleOpacity, {
         toValue: 0.4,
@@ -128,16 +203,65 @@ export default function HomeTimerScreen() {
     }, 1000);
     
     if (currentPhase === 'focus') {
-      // Focus complete, show success screen
+      // Reset penalties on successful completion
+      resetSessionPenalties();
+      
       navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, { 
-        sessionId: Date.now().toString() 
+        sessionId: sessionIdRef.current,
       });
       setCurrentPhase('idle');
+      
+      // Generate new session ID for next session
+      sessionIdRef.current = Date.now().toString();
     } else if (currentPhase === 'break') {
-      // Break complete, back to idle
       setCurrentPhase('idle');
       setTimeRemaining(0);
     }
+  };
+
+    // 🆕 Handle penalty alert confirmation
+  const handlePenaltyConfirm = () => {
+    if (!penaltyAlert) return;
+
+    switch (penaltyAlert.type) {
+      case 'warning':
+        // User confirmed they want to pause/stop
+        if (pendingAction === 'pause') {
+          setIsRunning(false);
+        } else if (pendingAction === 'stop') {
+          executeStop();
+        }
+        break;
+
+      case 'resetTimer':
+        // Reset timer to original duration
+        const secs = focusDuration * 60;
+        setTimeRemaining(secs);
+        totalDurationRef.current = secs;
+        progressAnim.setValue(0);
+        setIsRunning(false);
+        break;
+
+      case 'addTime':
+        // Add penalty time
+        if (penaltyAlert.timeAddedMinutes) {
+          const additionalSeconds = penaltyAlert.timeAddedMinutes * 60;
+          setTimeRemaining(prev => prev + additionalSeconds);
+          totalDurationRef.current += additionalSeconds;
+        }
+        setIsRunning(false);
+        break;
+    }
+
+    setPenaltyAlert(null);
+    setPendingAction(null);
+  };
+
+   // 🆕 Handle penalty alert cancel (only for warnings)
+  const handlePenaltyCancel = () => {
+    setPenaltyAlert(null);
+    setPendingAction(null);
+    // Don't pause/stop - user cancelled
   };
 
   const handleStartBreak = () => {
@@ -264,7 +388,7 @@ export default function HomeTimerScreen() {
             </View>
           )}
 
-          {/* Break button (only show after focus complete) */}
+        {/* Break button (only show after focus complete) */}
           {currentPhase === 'idle' && (
             <TouchableOpacity 
               style={styles.secondaryButton} 
@@ -302,6 +426,16 @@ export default function HomeTimerScreen() {
             </View>
           </>
         )}
+
+        {/* 🆕 Penalty Alert Modal */}
+        <PenaltyAlert
+          visible={penaltyAlert !== null}
+          penaltyType={penaltyAlert?.type || 'warning'}
+          message={penaltyAlert?.message || ''}
+          onConfirm={handlePenaltyConfirm}
+          onCancel={penaltyAlert?.type === 'warning' ? handlePenaltyCancel : undefined}
+          showCancel={penaltyAlert?.type === 'warning'}
+        />
       </SafeAreaView>
     </LinearGradient>
   );

@@ -1,0 +1,16 @@
+export type PenaltyType = 'warning' | 'resetTimer' | 'addTime';
+
+export interface Interruption {
+  id: string;
+  sessionId: string;
+  timestamp: Date;
+  reason: 'manual_pause' | 'app_background' | 'manual_stop';
+  penaltyApplied: PenaltyType | null;
+}
+
+export interface PenaltyAction {
+  type: PenaltyType;
+  message: string;
+  timeAddedMinutes?: number;
+  pauseCount?: number;
+}
