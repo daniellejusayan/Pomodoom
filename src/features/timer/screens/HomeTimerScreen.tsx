@@ -155,13 +155,13 @@ export default function HomeTimerScreen() {
 
   // 🎯 TIMER CONTROLS
   const handleStart = () => {
-// // 🧪 TEMPORARY: Skip timer and go directly to Session Complete screen
-//   // ⚠️ REMOVE THIS BLOCK TO RESTORE NORMAL TIMER FUNCTIONALITY
-//   navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, { 
-//     sessionId: Date.now().toString() 
-//   });
-//   return; // Exit early, skipping all the timer logic below
-//   // ⚠️ END OF TEMPORARY CODE
+// 🧪 TEMPORARY: Skip timer and go directly to Session Complete screen
+  // ⚠️ REMOVE THIS BLOCK TO RESTORE NORMAL TIMER FUNCTIONALITY
+  navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, { 
+    sessionId: Date.now().toString() 
+  });
+  return; // Exit early, skipping all the timer logic below
+  // ⚠️ END OF TEMPORARY CODE
       if (currentPhase === 'idle') {
       // Create new session ID
       sessionIdRef.current = Date.now().toString();
