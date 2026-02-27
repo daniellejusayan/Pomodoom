@@ -1,11 +1,14 @@
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import React from 'react';
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Image} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient'; // Optional: For a nice background gradient
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
+import { useSettings } from '../../../context/SettingsContext';
 import { ROUTES } from '../../../navigation/routes';
 import type { BottomTabParamList, TimerStackParamList } from '../../../navigation/types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,6 +17,29 @@ type Nav = NativeStackNavigationProp<TimerStackParamList, typeof ROUTES.TIMER.SE
 
 export default function SessionCompleteScreen() {
   const navigation = useNavigation<Nav>();
+  const { vibrationEnabled, soundEnabled } = useSettings();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // Trigger success feedback when session complete screen appears
+      const triggerFeedback = async () => {
+        if (vibrationEnabled) {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        if (soundEnabled) {
+          try {
+            const { sound } = await Audio.Sound.createAsync(
+              require('../../../../assets/sounds/success.mp3')
+            );
+            await sound.playAsync();
+          } catch (error) {
+            console.error('Failed to play success sound:', error);
+          }
+        }
+      };
+      triggerFeedback();
+    }, [vibrationEnabled, soundEnabled])
+  );
 
   const handleBackHome = () => {
     navigation.navigate(ROUTES.TIMER.HOME);

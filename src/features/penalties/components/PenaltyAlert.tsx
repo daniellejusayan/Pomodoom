@@ -8,8 +8,11 @@ import {
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
+import { useSettings } from '../../../context/SettingsContext';
 import type { PenaltyType } from '../types/PenaltyTypes';
 
 interface PenaltyAlertProps {
@@ -34,6 +37,7 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
   onGoBack,
 }) => {
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
+  const { vibrationEnabled, soundEnabled } = useSettings();
 
   React.useEffect(() => {
     if (visible) {
@@ -43,10 +47,28 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
         tension: 40,
         useNativeDriver: true,
       }).start();
+
+      // Trigger haptics and sound on penalty alert
+      const triggerFeedback = async () => {
+        if (vibrationEnabled) {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        }
+        if (soundEnabled) {
+          try {
+            const { sound } = await Audio.Sound.createAsync(
+              require('../../../../assets/sounds/penalty.mp3')
+            );
+            await sound.playAsync();
+          } catch (error) {
+            console.error('Failed to play penalty sound:', error);
+          }
+        }
+      };
+      triggerFeedback();
     } else {
       scaleAnim.setValue(0);
     }
-  }, [visible]);
+  }, [visible, vibrationEnabled, soundEnabled]);
 
   // Get icon and color based on penalty type
   const getAlertStyle = () => {
