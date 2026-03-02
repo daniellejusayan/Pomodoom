@@ -22,16 +22,23 @@ export default function SessionCompleteScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { vibrationEnabled, soundEnabled, addSessionInterruptions } = useSettings();
+  const recordedSessionRef = React.useRef<string | null>(null);
 
   // read pauseCount from params
   const { sessionId, pauseCount = 0 } = route.params ?? {};
+  const safePauseCount = Number.isFinite(pauseCount) ? Math.max(0, Math.floor(pauseCount)) : 0;
 
-  // record total interruptions when screen mounts
+  // record total interruptions once per completed session
   useEffect(() => {
-    if (pauseCount > 0) {
-      addSessionInterruptions(pauseCount);
+    if (!sessionId || recordedSessionRef.current === sessionId) {
+      return;
     }
-  }, [pauseCount, addSessionInterruptions]);
+
+    recordedSessionRef.current = sessionId;
+    if (safePauseCount > 0) {
+      addSessionInterruptions(safePauseCount);
+    }
+  }, [sessionId, safePauseCount, addSessionInterruptions]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -102,7 +109,7 @@ export default function SessionCompleteScreen() {
 
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>Interruptions:</Text>
-                <Text style={styles.statValue}>{pauseCount}</Text>
+                <Text style={styles.statValue}>{safePauseCount}</Text>
               </View>
 
               <View style={styles.statRow}>

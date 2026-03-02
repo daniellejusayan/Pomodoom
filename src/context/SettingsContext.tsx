@@ -86,7 +86,11 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         setBreakCycleCount(settings.breakCycleCount ?? 0);
         setLongBreaksCompleted(settings.longBreaksCompleted ?? 0);
         setTotalSessions(settings.totalSessions ?? 0);
-        setTotalInterruptions(settings.totalInterruptions ?? 0);
+        setTotalInterruptions(
+          Number.isFinite(settings.totalInterruptions)
+            ? Math.max(0, Math.floor(settings.totalInterruptions))
+            : 0
+        );
         setFirstUseDate(settings.firstUseDate ?? null);
         setDailySessions(settings.dailySessions ?? {});
       }
@@ -321,8 +325,14 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
   // 🆕 Record interruptions count when session ends
   const addSessionInterruptions = async (count: number) => {
+    const safeCount = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+    if (safeCount === 0) {
+      return;
+    }
+
     setTotalInterruptions(prev => {
-      const next = prev + count;
+      const safePrev = Number.isFinite(prev) ? prev : 0;
+      const next = safePrev + safeCount;
       saveSettings({
         focusDuration,
         breakDuration,
