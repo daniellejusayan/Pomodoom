@@ -3,7 +3,7 @@ import type { TimerState } from './useTimerState';
 
 export const useTimerActions = (state: ReturnType<typeof import('./useTimerState').useTimerState>) => {
   const start = useCallback(() => {
-    if (state.isRunning) return;
+    if (state.isRunning || state.intervalRef.current) return;
     state.setIsRunning(true);
     state.intervalRef.current = setInterval(() => {
       state.setSecondsLeft((s) => {

@@ -5,6 +5,7 @@ export interface ProgressRingProps {
   size?: number;
   strokeWidth?: number;
   color?: string;
+  gradientColors?: string[];
   backgroundColor?: string;
   children?: ReactNode; // optional center content
 }

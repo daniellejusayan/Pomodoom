@@ -5,7 +5,6 @@ import {
   Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle } from 'react-native-svg';
 
 import { colors } from '../../../core/theme/colors';
 import { ROUTES } from '../../../navigation/routes';
@@ -19,6 +18,7 @@ import type { PenaltyAction } from '../../penalties/types/PenaltyTypes';
 import { AppState, AppStateStatus } from 'react-native';
 import { useSettings } from '../../../context/SettingsContext';
 import { playAlarm, triggerVibration } from '../../../core/utils/alerts';
+import { useTimer } from '../../../shared/hooks/useTimer';
 import { FocusDurationCard } from '../components/FocusDurationCard';
 import { TimerDisplayCard } from '../components/TimerDisplayCard';
 import { TimerHeader } from '../components/TimerHeader';
@@ -29,26 +29,24 @@ type TimerPhase = 'idle' | 'focus' | 'break';
 
 export default function HomeTimerScreen() {
   const navigation = useNavigation<Nav>();
-  const AnimatedSvg = Animated.createAnimatedComponent(Svg);
-  const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
   const [currentPhase, setCurrentPhase] = useState<TimerPhase>('idle');
-  const [isRunning, setIsRunning] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(0); // in seconds
+  const completionHandledRef = useRef(false);
 
   // 🎯 DURATION SETTINGS - pulled from shared context
   const { focusDuration, breakDuration, setFocusDuration, setBreakDuration } = useSettings();
 
-  // 🆕 PROGRESS ANIMATION
-  const progressAnim = useRef(new Animated.Value(0)).current;              // 0..1
-  const totalDurationRef = useRef(0); // seconds
-  const CIRCLE_RADIUS = 110;
-  const STROKE_WIDTH = 10;
-  const circumference = 2 * Math.PI * (CIRCLE_RADIUS - STROKE_WIDTH / 2);
-  const dashOffset = progressAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [circumference, 0],
-  });
+  const {
+    secondsLeft,
+    isRunning,
+    progress,
+    formatted,
+    start,
+    pause,
+    reset,
+    set,
+  } = useTimer(focusDuration * 60);
+
   // 🆕 CIRCLE FADE ANIMATION for end-of-timer feedback
   const circleOpacity = useRef(new Animated.Value(1)).current;
 
@@ -78,37 +76,11 @@ export default function HomeTimerScreen() {
   const [sessionStopCount, setSessionStopCount] = useState(0); // 🆕 Track stop attempts in current session
   const sessionIdRef = useRef<string>(Date.now().toString());
 
-
-  // 🎯 COUNTDOWN TIMER LOGIC
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isRunning && timeRemaining > 0) {
-      interval = setInterval(() => {
-        setTimeRemaining(prev => {
-          if (prev <= 1) {
-            handleTimerComplete();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    if (currentPhase === 'idle') {
+      reset(focusDuration * 60);
     }
-    
-    return () => clearInterval(interval);
-  }, [isRunning, timeRemaining]);
-
-  // 🆕 Update progress animation when timeRemaining changes
-  useEffect(() => {
-    if (currentPhase !== 'idle' && totalDurationRef.current > 0) {
-      const ratio = 1 - timeRemaining / totalDurationRef.current;
-      Animated.timing(progressAnim, {
-        toValue: ratio,
-        duration: 500,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [timeRemaining, currentPhase]);
+  }, [focusDuration, currentPhase, reset]);
 
     // 🆕 Monitor app state for background detection
   useEffect(() => {
@@ -140,11 +112,10 @@ export default function HomeTimerScreen() {
         if (penalty.type === 'addTime' && penalty.timeAddedMinutes) {
           // Add time immediately for background interruption
           const additionalSeconds = penalty.timeAddedMinutes * 60;
-          setTimeRemaining(prev => prev + additionalSeconds);
-          totalDurationRef.current += additionalSeconds;
+          set(secondsLeft + additionalSeconds);
         }
         // Pause the timer
-        setIsRunning(false);
+        pause();
       }
     }
   };
@@ -168,15 +139,13 @@ export default function HomeTimerScreen() {
       // Start new focus session
       setCurrentPhase('focus');
       const secs = focusDuration * 60;
-      setTimeRemaining(secs);
-      totalDurationRef.current = secs;
-      progressAnim.setValue(0);
+      reset(secs);
       circleOpacity.setValue(1);
       setSessionStopCount(0); // 🆕 Reset stop count on new session
-      setIsRunning(true);
+      start();
     } else {
       // Resume paused timer
-      setIsRunning(true);
+      start();
     }
   };
 
@@ -189,7 +158,7 @@ export default function HomeTimerScreen() {
       setPenaltyAlert(penalty);
     } else {
       // No penalty set, pause immediately
-      setIsRunning(false);
+      pause();
     }
   };
 
@@ -216,10 +185,9 @@ export default function HomeTimerScreen() {
       pauseCount: sessionPauseCount,
     });
     // then reset internal state similar to executeStop
-    setIsRunning(false);
+    pause();
     setCurrentPhase('idle');
-    setTimeRemaining(0);
-    progressAnim.setValue(0);
+    reset(focusDuration * 60);
     circleOpacity.setValue(1);
     resetSessionPenalties();
     setSessionStopCount(0);
@@ -229,8 +197,7 @@ export default function HomeTimerScreen() {
 
 // 🔄 MODIFIED: handleTimerComplete - reset penalties on successful completion, play sound & vibration
   const handleTimerComplete = async () => {
-    setIsRunning(false);
-    progressAnim.setValue(0);
+    pause();
     
     // 🆕 Play sound and vibration if enabled
     if (soundEnabled) {
@@ -259,6 +226,7 @@ export default function HomeTimerScreen() {
         pauseCount: sessionPauseCount,
       });
       setCurrentPhase('idle');
+      reset(focusDuration * 60);
       
       // Generate new session ID for next session
       sessionIdRef.current = Date.now().toString();
@@ -272,9 +240,21 @@ export default function HomeTimerScreen() {
         incrementBreakCycle();
       }
       setCurrentPhase('idle');
-      setTimeRemaining(0);
+      reset(focusDuration * 60);
     }
   };
+
+  useEffect(() => {
+    if (currentPhase !== 'idle' && secondsLeft === 0 && !isRunning && !completionHandledRef.current) {
+      completionHandledRef.current = true;
+      handleTimerComplete();
+      return;
+    }
+
+    if (secondsLeft > 0 || currentPhase === 'idle') {
+      completionHandledRef.current = false;
+    }
+  }, [secondsLeft, isRunning, currentPhase]);
 
     // 🆕 Handle penalty alert confirmation
   const handlePenaltyConfirm = () => {
@@ -284,7 +264,7 @@ export default function HomeTimerScreen() {
       case 'warning':
         // User confirmed they want to pause/stop
         if (pendingAction === 'pause') {
-          setIsRunning(false);
+          pause();
         } else if (pendingAction === 'stop') {
           finishSession();
         }
@@ -296,10 +276,8 @@ export default function HomeTimerScreen() {
         } else {
           // Reset timer to original duration
           const secs = focusDuration * 60;
-          setTimeRemaining(secs);
-          totalDurationRef.current = secs;
-          progressAnim.setValue(0);
-          setIsRunning(false);
+          reset(secs);
+          pause();
         }
         break;
 
@@ -310,10 +288,9 @@ export default function HomeTimerScreen() {
           // Add penalty time
           if (penaltyAlert.timeAddedMinutes) {
             const additionalSeconds = penaltyAlert.timeAddedMinutes * 60;
-            setTimeRemaining(prev => prev + additionalSeconds);
-            totalDurationRef.current += additionalSeconds;
+            set(secondsLeft + additionalSeconds);
           }
-          setIsRunning(false);
+          pause();
         }
         break;
     }
@@ -335,11 +312,9 @@ export default function HomeTimerScreen() {
     setCurrentPhase('break');
     // determine duration: if eligible for long break
     const secs = (isNextBreakLong ? longBreakDuration : breakDuration) * 60;
-    setTimeRemaining(secs);
-    totalDurationRef.current = secs;
-    progressAnim.setValue(0);
+    reset(secs);
     circleOpacity.setValue(1);
-    setIsRunning(true);
+    start();
   };
 
   // 🆕 Add handler for "Go Back" button
@@ -357,28 +332,23 @@ const handlePenaltyGoBack = () => {
   if (type === 'resetTimer') {
     // Reset timer to original duration, but stay on the timer screen
     const secs = focusDuration * 60;
-    setTimeRemaining(secs);
-    totalDurationRef.current = secs;
-    progressAnim.setValue(0);
-    setIsRunning(false);
+    reset(secs);
+    pause();
   } else if (type === 'addTime' && added) {
     // Add penalty time then resume
     const additionalSeconds = added * 60;
-    setTimeRemaining(prev => prev + additionalSeconds);
-    totalDurationRef.current += additionalSeconds;
-    setIsRunning(true);
+    set(secondsLeft + additionalSeconds);
+    start();
   } else {
     // Resume the timer for other penalty types or warnings
-    setIsRunning(true);
+    start();
   }
 };
 
   // 🎯 COMPUTED VALUES
-  const displayMinutes = Math.floor(timeRemaining / 60);
-  const displaySeconds = timeRemaining % 60;
   const displayTime = currentPhase === 'idle' 
     ? focusDuration 
-    : `${displayMinutes}:${displaySeconds.toString().padStart(2, '0')}`;
+    : formatted;
 
   const timerMessage = useMemo(() => {
     if (currentPhase === 'idle') {
@@ -401,6 +371,7 @@ const handlePenaltyGoBack = () => {
         <TimerDisplayCard
           currentPhase={currentPhase}
           isRunning={isRunning}
+          progress={progress}
           circleOpacity={circleOpacity}
           displayTime={displayTime}
           timerMessage={timerMessage}
@@ -409,12 +380,6 @@ const handlePenaltyGoBack = () => {
           onStop={handleStop}
           onPause={handlePause}
           onStartBreak={handleStartBreak}
-          AnimatedSvg={AnimatedSvg}
-          AnimatedCircle={AnimatedCircle}
-          CIRCLE_RADIUS={CIRCLE_RADIUS}
-          STROKE_WIDTH={STROKE_WIDTH}
-          circumference={circumference}
-          dashOffset={dashOffset}
         />
 
         {currentPhase === 'idle' && (
