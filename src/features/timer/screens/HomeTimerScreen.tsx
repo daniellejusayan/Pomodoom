@@ -158,7 +158,8 @@ export default function HomeTimerScreen() {
 // 🧪 TEMPORARY: Skip timer and go directly to Session Complete screen
   // ⚠️ REMOVE THIS BLOCK TO RESTORE NORMAL TIMER FUNCTIONALITY
   navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, { 
-    sessionId: Date.now().toString() 
+    sessionId: Date.now().toString(),
+    pauseCount: sessionPauseCount,
   });
   return; // Exit early, skipping all the timer logic below
   // ⚠️ END OF TEMPORARY CODE
@@ -214,6 +215,7 @@ export default function HomeTimerScreen() {
     // navigate to summary
     navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, {
       sessionId: sessionIdRef.current,
+      pauseCount: sessionPauseCount,
     });
     // then reset internal state similar to executeStop
     setIsRunning(false);
@@ -254,8 +256,9 @@ export default function HomeTimerScreen() {
       // count session
       incrementSessions();
       
-      navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, { 
+      navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, {
         sessionId: sessionIdRef.current,
+        pauseCount: sessionPauseCount,
       });
       setCurrentPhase('idle');
       

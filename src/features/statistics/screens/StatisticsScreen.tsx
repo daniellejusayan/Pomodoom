@@ -39,12 +39,14 @@ export default function StatisticsScreen() {
     longBreaksCompleted,
     focusDuration,
     totalSessions,
+    totalInterruptions,
   } = useSettings();
 
   // build stats cards dynamically
   const statsCards = [
     { label: 'Successful Focus Sessions', value: String(totalSessions) },
     { label: 'Long Breaks Taken', value: String(longBreaksCompleted) },
+    { label: 'Total Interruptions', value: String(totalInterruptions) },
   ];
 
   // Calculate max hours for bar chart scaling

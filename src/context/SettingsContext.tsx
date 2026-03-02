@@ -25,6 +25,7 @@ interface SettingsContextType {
   breakCycleCount: number; // number of normal breaks since last long break
   longBreaksCompleted: number;
   totalSessions: number; // number of completed focus sessions
+  totalInterruptions: number; // cumulative pause/interrupt attempts across all sessions
   firstUseDate: string | null; // ISO date string
   dailySessions: { [date: string]: number }; // sessions count per day
 
@@ -42,6 +43,7 @@ interface SettingsContextType {
   incrementLongBreaks: () => Promise<void>;
   incrementSessions: () => Promise<void>;
   incrementDailySessions: () => Promise<void>;
+  addSessionInterruptions: (count: number) => Promise<void>;
   loading: boolean;
 }
 
@@ -60,6 +62,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const [breakCycleCount, setBreakCycleCount] = useState(0);
   const [longBreaksCompleted, setLongBreaksCompleted] = useState(0);
   const [totalSessions, setTotalSessions] = useState(0);
+  const [totalInterruptions, setTotalInterruptions] = useState(0);
   const [firstUseDate, setFirstUseDate] = useState<string | null>(null);
   const [dailySessions, setDailySessions] = useState<{ [date: string]: number }>({});
   const [loading, setLoading] = useState(true);
@@ -83,6 +86,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         setBreakCycleCount(settings.breakCycleCount ?? 0);
         setLongBreaksCompleted(settings.longBreaksCompleted ?? 0);
         setTotalSessions(settings.totalSessions ?? 0);
+        setTotalInterruptions(settings.totalInterruptions ?? 0);
         setFirstUseDate(settings.firstUseDate ?? null);
         setDailySessions(settings.dailySessions ?? {});
       }
@@ -113,6 +117,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       breakCycleCount,
       longBreaksCompleted,
       totalSessions,
+      totalInterruptions,
+      firstUseDate,
+      dailySessions,
     });
   };
 
@@ -128,6 +135,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       breakCycleCount,
       longBreaksCompleted,
       totalSessions,
+      totalInterruptions,
+      firstUseDate,
+      dailySessions,
     });
   };
 
@@ -143,6 +153,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       breakCycleCount,
       longBreaksCompleted,
       totalSessions,
+      totalInterruptions,
+      firstUseDate,
+      dailySessions,
     });
   };
 
@@ -158,6 +171,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       breakCycleCount,
       longBreaksCompleted,
       totalSessions,
+      totalInterruptions,
+      firstUseDate,
+      dailySessions,
     });
   };
 
@@ -173,6 +189,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       breakCycleCount,
       longBreaksCompleted,
       totalSessions,
+      totalInterruptions,
+      firstUseDate,
+      dailySessions,
     });
   };
 
@@ -187,6 +206,10 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       vibrationEnabled: enabled,
       breakCycleCount,
       longBreaksCompleted,
+      totalSessions,
+      totalInterruptions,
+      firstUseDate,
+      dailySessions,
     });
   };
 
@@ -202,6 +225,10 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         vibrationEnabled,
         breakCycleCount: next,
         longBreaksCompleted,
+        totalSessions,
+        totalInterruptions,
+        firstUseDate,
+        dailySessions,
       });
       return next;
     });
@@ -218,6 +245,10 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       vibrationEnabled,
       breakCycleCount: 0,
       longBreaksCompleted,
+      totalSessions,
+      totalInterruptions,
+      firstUseDate,
+      dailySessions,
     });
   };
 
@@ -256,6 +287,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         breakCycleCount,
         longBreaksCompleted,
         totalSessions: next,
+        totalInterruptions,
         firstUseDate: firstUseDate || new Date().toISOString(),
         dailySessions,
       });
@@ -279,10 +311,33 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         breakCycleCount,
         longBreaksCompleted,
         totalSessions,
+        totalInterruptions,
         firstUseDate,
         dailySessions: updated,
       });
       return updated;
+    });
+  };
+
+  // 🆕 Record interruptions count when session ends
+  const addSessionInterruptions = async (count: number) => {
+    setTotalInterruptions(prev => {
+      const next = prev + count;
+      saveSettings({
+        focusDuration,
+        breakDuration,
+        longBreakDuration,
+        penaltyType,
+        soundEnabled,
+        vibrationEnabled,
+        breakCycleCount,
+        longBreaksCompleted,
+        totalSessions,
+        totalInterruptions: next,
+        firstUseDate,
+        dailySessions,
+      });
+      return next;
     });
   };
 
@@ -298,6 +353,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         breakCycleCount,
         longBreaksCompleted,
         totalSessions,
+        totalInterruptions,
         firstUseDate,
         dailySessions,
         setFocusDuration,
@@ -311,6 +367,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         incrementLongBreaks,
         incrementSessions,
         incrementDailySessions,
+        addSessionInterruptions,
         loading,
       }}
     >

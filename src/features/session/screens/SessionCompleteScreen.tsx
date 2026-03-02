@@ -1,5 +1,5 @@
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import React from 'react';
+import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
+import React, { useEffect } from 'react';
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Image} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient'; // Optional: For a nice background gradient
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -15,9 +15,22 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type Nav = NativeStackNavigationProp<TimerStackParamList, typeof ROUTES.TIMER.SESSION_COMPLETE>;
 
+type Route = RouteProp<TimerStackParamList, typeof ROUTES.TIMER.SESSION_COMPLETE>;
+
 export default function SessionCompleteScreen() {
   const navigation = useNavigation<Nav>();
-  const { vibrationEnabled, soundEnabled } = useSettings();
+  const route = useRoute<Route>();
+  const { vibrationEnabled, soundEnabled, addSessionInterruptions } = useSettings();
+
+  // read pauseCount from params
+  const { sessionId, pauseCount = 0 } = route.params ?? {};
+
+  // record total interruptions when screen mounts
+  useEffect(() => {
+    if (pauseCount > 0) {
+      addSessionInterruptions(pauseCount);
+    }
+  }, [pauseCount, addSessionInterruptions]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -88,7 +101,7 @@ export default function SessionCompleteScreen() {
 
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>Interruptions:</Text>
-                <Text style={styles.statValue}>0</Text>
+                <Text style={styles.statValue}>{pauseCount}</Text>
               </View>
 
               <View style={styles.statRow}>
