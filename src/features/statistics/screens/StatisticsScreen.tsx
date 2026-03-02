@@ -3,7 +3,6 @@ import {
   SafeAreaView, 
   ScrollView,
   StyleSheet, 
-  Text, 
   View,
   Dimensions,
 } from 'react-native';
@@ -12,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
 import { useSettings } from '../../../context/SettingsContext';
+import { Card, Text } from '../../../shared/components';
 
 // 🎯 Sample data placeholders - real values fetched from context/storage below
 
@@ -76,7 +76,7 @@ export default function StatisticsScreen() {
           </View>
 
           {/* 🎯 WEEKLY FOCUS TIME CHART */}
-          <View style={styles.card}>
+          <Card>
             <Text style={styles.cardTitle}>Weekly Focus Time</Text>
             
             {/* Bar Chart */}
@@ -118,10 +118,10 @@ export default function StatisticsScreen() {
                 })}
               </View>
             </View>
-          </View>
+          </Card>
 
           {/* 🎯 DAILY SESSIONS LINE CHART */}
-          <View style={styles.card}>
+          <Card>
             <Text style={styles.cardTitle}>Daily Sessions</Text>
             
             {/* Line Chart Container */}
@@ -148,7 +148,7 @@ export default function StatisticsScreen() {
                 </LinearGradient>
               </View>
             </View>
-          </View>
+          </Card>
 
         </ScrollView>
       </SafeAreaView>

@@ -3,9 +3,6 @@ import {
   SafeAreaView, 
   ScrollView,
   StyleSheet, 
-  Switch, 
-  Text, 
-  TouchableOpacity, 
   View 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,6 +16,7 @@ import {
 } from '../../../core/constants';
 
 import { useSettings } from '../../../context/SettingsContext';
+import { Card, Chip, Switch as AppSwitch, Text } from '../../../shared/components';
 
 export default function SettingsScreen() {
   // 🔗 Get settings from context (shared with Home screen)
@@ -51,153 +49,88 @@ export default function SettingsScreen() {
           <Text style={styles.heading}>Settings</Text>
 
           {/* 🎯 FOCUS DURATION CARD */}
-          <View style={styles.card}>
+          <Card>
             <Text style={styles.cardTitle}>Focus Duration</Text>
             <View style={styles.chipsContainer}>
               {focusDurationsMinutes.filter((duration) => duration <= 45).map((duration) => {
                 const isActive = duration === focusDuration;
                 return (
-                  <TouchableOpacity
+                  <Chip
                     key={duration}
-                    style={[styles.chip, isActive && styles.chipActive]}
+                    label={`${duration}m`}
+                    selected={isActive}
                     onPress={() => setFocusDuration(duration)}
-                  >
-                    <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                      {duration}m
-                    </Text>
-                  </TouchableOpacity>
+                  />
                 );
               })}
             </View>
-          </View>
+          </Card>
 
           {/* 🎯 BREAK DURATION CARD */}
-          <View style={styles.card}>
+          <Card>
             <Text style={styles.cardTitle}>Break Duration</Text>
             <View style={styles.chipsContainer}>
               {breakDurationMinutes.slice(0, 3).map((duration) => {
                 const isActive = duration === breakDuration;
                 return (
-                  <TouchableOpacity
+                  <Chip
                     key={duration}
-                    style={[
-                      styles.chip, 
-                      isActive && styles.chipActive
-                    ]}
+                    label={`${duration}m`}
+                    selected={isActive}
                     onPress={() => setBreakDuration(duration)}
-                  >
-                    <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                      {duration}m
-                    </Text>
-                  </TouchableOpacity>
+                  />
                 );
               })}
             </View>
-          </View>
+          </Card>
 
           {/* 🎯 LONG BREAK DURATION CARD */}
-          <View style={styles.card}>
+          <Card>
             <Text style={styles.cardTitle}>Long Break Duration</Text>
             <View style={styles.chipsContainer}>
               {longBreakMinutes.map((duration) => {
                 const isActive = duration === longBreakDuration;
                 return (
-                  <TouchableOpacity
+                  <Chip
                     key={duration}
-                    style={[
-                      styles.chip,
-                      isActive && styles.chipActive
-                    ]}
+                    label={`${duration}m`}
+                    selected={isActive}
                     onPress={() => setLongBreakDuration(duration)}
-                  >
-                    <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                      {duration}m
-                    </Text>
-                  </TouchableOpacity>
+                  />
                 );
               })}
             </View>
-          </View>
+          </Card>
 
           {/* 🎯 PENALTY TYPE CARD */}
-          <View style={styles.card}>
+          <Card>
             <Text style={styles.cardTitle}>Penalty Type</Text>
-            
-            {/* Warning Option */}
-            <TouchableOpacity
-              style={styles.radioRow}
-              onPress={() => setPenaltyType('warning')}
-            >
-              <View style={styles.radioButton}>
-                {penaltyType === 'warning' && (
-                  <View style={styles.radioButtonSelected} />
-                )}
-              </View>
-              <Text style={styles.radioLabel}>Warning</Text>
-            </TouchableOpacity>
-
-            {/* Reset Timer Option */}
-            <TouchableOpacity
-              style={styles.radioRow}
-              onPress={() => setPenaltyType('resetTimer')}
-            >
-              <View style={styles.radioButton}>
-                {penaltyType === 'resetTimer' && (
-                  <View style={styles.radioButtonSelected} />
-                )}
-              </View>
-              <Text style={styles.radioLabel}>Reset Timer</Text>
-            </TouchableOpacity>
-
-            {/* Add Time Option */}
-            <TouchableOpacity
-              style={styles.radioRow}
-              onPress={() => setPenaltyType('addTime')}
-            >
-              <View style={styles.radioButton}>
-                {penaltyType === 'addTime' && (
-                  <View style={styles.radioButtonSelected} />
-                )}
-              </View>
-              <Text style={styles.radioLabel}>Add Time</Text>
-            </TouchableOpacity>
-          </View>
+            <View style={styles.chipsContainer}>
+              <Chip label="Warning" selected={penaltyType === 'warning'} onPress={() => setPenaltyType('warning')} />
+              <Chip label="Reset Timer" selected={penaltyType === 'resetTimer'} onPress={() => setPenaltyType('resetTimer')} />
+              <Chip label="Add Time" selected={penaltyType === 'addTime'} onPress={() => setPenaltyType('addTime')} />
+            </View>
+          </Card>
 
           {/* 🎯 SOUND & VIBRATION CARD */}
-          <View style={styles.card}>
+          <Card>
             {/* Sound Toggle */}
-            <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Sound</Text>
-              <Switch
-                value={soundEnabled}
-                onValueChange={setSoundEnabled}
-                trackColor={{ 
-                  false: colors.border, 
-                  true: colors.primary 
-                }}
-                thumbColor="#fff"
-                ios_backgroundColor={colors.border}
-              />
-            </View>
+            <AppSwitch
+              label="Sound"
+              value={soundEnabled}
+              onValueChange={setSoundEnabled}
+            />
 
             {/* Divider */}
             <View style={styles.divider} />
 
             {/* Vibration Toggle */}
-            <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Vibration</Text>
-              <Switch
-                value={vibrationEnabled}
-                onValueChange={setVibrationEnabled}
-                trackColor={{ 
-                  false: colors.border, 
-                  true: colors.primary 
-                }}
-                thumbColor="#fff"
-                ios_backgroundColor={colors.border}
-              />
-            </View>
-          </View>
+            <AppSwitch
+              label="Vibration"
+              value={vibrationEnabled}
+              onValueChange={setVibrationEnabled}
+            />
+          </Card>
 
         </ScrollView>
       </SafeAreaView>

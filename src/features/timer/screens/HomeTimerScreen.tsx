@@ -3,8 +3,6 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
   Animated,
 } from 'react-native';
@@ -26,6 +24,7 @@ import type { PenaltyAction } from '../../penalties/types/PenaltyTypes';
 import { AppState, AppStateStatus } from 'react-native';
 import { useSettings } from '../../../context/SettingsContext';
 import { playAlarm, triggerVibration } from '../../../core/utils/alerts';
+import { Button, Card, Chip, Text } from '../../../shared/components';
 
 type Nav = NativeStackNavigationProp<TimerStackParamList, typeof ROUTES.TIMER.HOME>;
 type TimerPhase = 'idle' | 'focus' | 'break';
@@ -452,60 +451,72 @@ const handlePenaltyGoBack = () => {
           {/* 🎯 TIMER CONTROLS */}
           {currentPhase === 'idle' ? (
             <>
-              <TouchableOpacity 
-                style={styles.primaryButton}
+              <Button
                 onPress={handleStart}
+                fullWidth
+                style={styles.primaryButton}
+                textStyle={styles.primaryButtonText}
               >
-                <Text style={styles.primaryButtonText}>Start Focus</Text>
-              </TouchableOpacity>
+                Start Focus
+              </Button>
             </>
           ) : (
             <View style={styles.controlRow}>
-              <TouchableOpacity 
-                style={styles.controlButton}
+              <Button
                 onPress={handleStop}
+                variant="outline"
+                fullWidth
+                style={styles.controlButton}
+                textStyle={styles.controlButtonText}
+                icon={<Ionicons name="stop" size={22} color={colors.danger} />}
               >
-                <Ionicons name="stop" size={24} color={colors.danger} />
-                <Text style={styles.controlButtonText}>Stop</Text>
-              </TouchableOpacity>
+                Stop
+              </Button>
 
               {isRunning ? (
-                <TouchableOpacity 
-                  style={styles.controlButton}
+                <Button
                   onPress={handlePause}
-                >
-                  <Ionicons name="pause" size={24} color={colors.primary} />
-                  <Text style={styles.controlButtonText}>Pause</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity 
+                  variant="outline"
+                  fullWidth
                   style={styles.controlButton}
-                  onPress={handleStart}
+                  textStyle={styles.controlButtonText}
+                  icon={<Ionicons name="pause" size={22} color={colors.primary} />}
                 >
-                  <Ionicons name="play" size={24} color={colors.primary} />
-                  <Text style={styles.controlButtonText}>Resume</Text>
-                </TouchableOpacity>
+                  Pause
+                </Button>
+              ) : (
+                <Button
+                  onPress={handleStart}
+                  variant="outline"
+                  fullWidth
+                  style={styles.controlButton}
+                  textStyle={styles.controlButtonText}
+                  icon={<Ionicons name="play" size={22} color={colors.primary} />}
+                >
+                  Resume
+                </Button>
               )}
             </View>
           )}
 
         {/* Break button (only show after focus complete) */}
           {currentPhase === 'idle' && (
-            <TouchableOpacity 
-              style={styles.secondaryButton} 
+            <Button
               onPress={handleStartBreak}
+              variant="secondary"
+              fullWidth
+              style={styles.secondaryButton}
+              textStyle={styles.secondaryButtonText}
             >
-              <Text style={styles.secondaryButtonText}>
-                {isNextBreakLong ? 'Start Long Break' : 'Start Break'}
-              </Text>
-            </TouchableOpacity>
+              {isNextBreakLong ? 'Start Long Break' : 'Start Break'}
+            </Button>
           )}
         </View>
 
         {/* 🎯 FOCUS DURATION SELECTOR - Only show when idle */}
         {currentPhase === 'idle' && (
           <>
-            <View style={styles.card}>
+            <Card>
               <View style={styles.cardHeader}>
                 <Ionicons name="timer-outline" size={20} color={colors.primary} />
                 <Text style={styles.sectionTitle}>Focus Duration</Text>
@@ -514,19 +525,16 @@ const handlePenaltyGoBack = () => {
                 {focusDurationsMinutes.map((item) => {
                   const isActive = item === focusDuration;
                   return (
-                    <TouchableOpacity
+                    <Chip
                       key={item}
-                      style={[styles.chip, isActive && styles.chipActive]}
+                      label={`${item}m`}
+                      selected={isActive}
                       onPress={() => setFocusDuration(item)}
-                    >
-                      <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                        {item}m
-                      </Text>
-                    </TouchableOpacity>
+                    />
                   );
                 })}
               </View>
-            </View>
+            </Card>
           </>
         )}
 

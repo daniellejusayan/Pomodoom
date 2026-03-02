@@ -1,6 +1,6 @@
 import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import React, { useEffect } from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Image} from 'react-native';
+import { SafeAreaView, StyleSheet, View, Image} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient'; // Optional: For a nice background gradient
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
@@ -12,6 +12,7 @@ import { useSettings } from '../../../context/SettingsContext';
 import { ROUTES } from '../../../navigation/routes';
 import type { BottomTabParamList, TimerStackParamList } from '../../../navigation/types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Button, Card, Text } from '../../../shared/components';
 
 type Nav = NativeStackNavigationProp<TimerStackParamList, typeof ROUTES.TIMER.SESSION_COMPLETE>;
 
@@ -75,7 +76,7 @@ export default function SessionCompleteScreen() {
 
         <View style={styles.content}>
           {/* 🆕 ADDED: White card container for all content */}
-          <View style={styles.card}>
+          <Card>
             
             {/* 🆕 ADDED: Celebration illustration */}
             <View style={styles.illustrationContainer}>
@@ -109,25 +110,30 @@ export default function SessionCompleteScreen() {
                 <Text style={styles.statValue}>None</Text>
               </View>
             </View>
-          </View>
+          </Card>
 
           {/* 🆕 ADDED: Buttons outside the white card */}
           <View style={styles.buttonsContainer}>
             {/* Primary Button - Return to Home */}
-            <TouchableOpacity 
-              style={styles.primaryButton} 
+            <Button
               onPress={handleBackHome}
+              fullWidth
+              style={styles.primaryButton}
+              textStyle={styles.primaryButtonText}
             >
-              <Text style={styles.primaryButtonText}>Return to Home</Text>
-            </TouchableOpacity>
+              Return to Home
+            </Button>
 
             {/* 🆕 ADDED: Secondary Button - View Statistics */}
-            <TouchableOpacity 
-              style={styles.secondaryButton} 
+            <Button
               onPress={handleViewStats}
+              variant="secondary"
+              fullWidth
+              style={styles.secondaryButton}
+              textStyle={styles.secondaryButtonText}
             >
-              <Text style={styles.secondaryButtonText}>View Statistics</Text>
-            </TouchableOpacity>
+              View Statistics
+            </Button>
           </View>
         </View>
       </SafeAreaView>

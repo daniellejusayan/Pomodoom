@@ -4,9 +4,7 @@ import {
   Easing,
   SafeAreaView,
   StyleSheet,
-  Text,
   View,
-  Pressable,
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +14,7 @@ import { ROUTES } from '../../../navigation/routes';
 import { RootStackParamList } from '../../../navigation/types';
 import { spacing } from '../../../core/theme/spacing';
 import { colors } from '../../../core/theme/colors';
+import { Button, Text } from '../../../shared/components';
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -27,8 +26,6 @@ type Props = NativeStackScreenProps<
 export default function OnboardingScreen({ navigation, onComplete }: Props) {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
-  const shineAnim = useRef(new Animated.Value(-150)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -51,34 +48,6 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
       ])
     ).start();
   }, []);
-
-  // ✨ Shine animation (button hover effect equivalent)
-  const triggerShine = () => {
-    shineAnim.setValue(-150);
-    Animated.timing(shineAnim, {
-      toValue: 300,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  // 🆕 ADDED: Button press animation (scale down then back up)
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.95,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  // 🆕 ADDED: Button release animation
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      friction: 3,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  };
 
   const handleGetStarted = async () => {
     if (isLoading) return;
@@ -146,41 +115,16 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
 
           {/* Bottom Section */}
           <View style={styles.bottom}>
-            <Pressable
-              onPressIn={handlePressIn}  // 🆕 Scale down on press
-              onPressOut={handlePressOut} // 🆕 Scale back on release
-              onPress={() => {
-                triggerShine();
-                handleGetStarted();
-              }}
+            <Button
+              onPress={handleGetStarted}
+              loading={isLoading}
+              size="large"
+              fullWidth
+              style={styles.ctaButton}
+              textStyle={styles.ctaText}
             >
-              {/* 🆕 ADDED: Animated wrapper for scale transform */}
-              <Animated.View
-                style={[
-                  styles.ctaWrapper,
-                  { transform: [{ scale: scaleAnim }] },
-                ]}
-              >
-                <LinearGradient
-                  colors={[colors.primary, colors.primaryDeep]}
-                  start={{ x: 1, y: 0.05 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.cta}
-                >
-                  {/* 🔄 CHANGED: Show loading state if processing */}
-                  <Text style={styles.ctaText}>
-                    {isLoading ? 'Loading...' : 'Get Started'}
-                  </Text>
-
-                  <Animated.View
-                    style={[
-                      styles.shine,
-                      { transform: [{ translateX: shineAnim }, { rotate: '20deg' }] },
-                    ]}
-                  />
-                </LinearGradient>
-              </Animated.View>
-            </Pressable>
+              Get Started
+            </Button>
           </View>
 
         </Animated.View>
@@ -249,36 +193,20 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
 
-  ctaWrapper: {
+  ctaButton: {
     borderRadius: 999,
-    overflow: 'hidden',
-    // 🆕 ADDED: Shadow for depth (iOS)
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    // 🆕 ADDED: Elevation for depth (Android)
     elevation: 5,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
-  },
-
-  cta: {
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 
   ctaText: {
     color: colors.white,
     fontSize: 18,
     fontWeight: '700',
-  },
-
-  shine: {
-    position: 'absolute',
-    width: 120,
-    height: '100%',
   },
 });

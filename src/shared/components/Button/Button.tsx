@@ -18,6 +18,8 @@ const Button = ({
   iconPosition = 'left',
   fullWidth = false,
   accessibilityLabel,
+  style,
+  textStyle: customTextStyle,
 }: ButtonProps) => {
   const containerStyles = [
     styles.container,
@@ -27,7 +29,7 @@ const Button = ({
     disabled && styles.disabled,
   ];
 
-  const textStyle = variant === 'secondary' || variant === 'outline' ? styles.contentTextSecondary : styles.contentText;
+  const baseTextStyle = variant === 'secondary' || variant === 'outline' ? styles.contentTextSecondary : styles.contentText;
 
   return (
     <Pressable
@@ -37,15 +39,16 @@ const Button = ({
       accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => [
         ...containerStyles,
+        style,
         pressed && { opacity: 0.85 },
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={textStyle.color || '#fff'} />
+        <ActivityIndicator color={baseTextStyle.color || '#fff'} />
       ) : (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {icon && iconPosition === 'left' ? <View style={styles.iconLeft}>{icon}</View> : null}
-          <RNText style={textStyle as any}>{children as any}</RNText>
+          <RNText style={[baseTextStyle as any, customTextStyle as any]}>{children as any}</RNText>
           {icon && iconPosition === 'right' ? <View style={styles.iconRight}>{icon}</View> : null}
         </View>
       )}
