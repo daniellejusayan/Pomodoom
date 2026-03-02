@@ -3,7 +3,7 @@ import { NavigatorScreenParams } from '@react-navigation/native';
 import { ROUTES } from './routes';
 
 export type TimerStackParamList = {
-	[ROUTES.TIMER.HOME]: undefined;
+	[ROUTES.TIMER.HOME]: { replayTutorial?: boolean } | undefined;
 	[ROUTES.TIMER.SESSION_COMPLETE]: { sessionId?: string; pauseCount?: number } | undefined;
 };
 

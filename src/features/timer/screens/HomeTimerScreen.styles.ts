@@ -118,9 +118,40 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
+  sectionDescription: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+  },
   chipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  coachCard: {
+    gap: spacing.sm,
+  },
+  coachTitle: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  coachSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  coachBullet: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  coachActions: {
+    marginTop: spacing.xs,
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  coachSecondaryAction: {
+    flex: 1,
   },
 });

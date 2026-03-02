@@ -5,7 +5,15 @@ const STORAGE_KEY = '@pomodoom_settings';
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
-export type PenaltyType = 'warning' | 'resetTimer' | 'addTime';
+export type PenaltyType = 'none' | 'warning' | 'resetTimer' | 'addTime' | 'lockMode';
+
+const VALID_PENALTY_TYPES: PenaltyType[] = ['none', 'warning', 'resetTimer', 'addTime', 'lockMode'];
+
+const sanitizePenaltyType = (value: unknown): PenaltyType => {
+  return typeof value === 'string' && (VALID_PENALTY_TYPES as string[]).includes(value)
+    ? (value as PenaltyType)
+    : 'none';
+};
 
 interface SettingsContextType {
 
@@ -55,7 +63,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const [focusDuration, setFocusDurationState] = useState(25);
   const [breakDuration, setBreakDurationState] = useState(5);
   const [longBreakDuration, setLongBreakDurationState] = useState(15);
-  const [penaltyType, setPenaltyTypeState] = useState<PenaltyType>('warning');
+  const [penaltyType, setPenaltyTypeState] = useState<PenaltyType>('none');
   const [soundEnabled, setSoundEnabledState] = useState(true);
   const [vibrationEnabled, setVibrationEnabledState] = useState(true);
   // stats
@@ -80,7 +88,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         setFocusDurationState(settings.focusDuration ?? 25);
         setBreakDurationState(settings.breakDuration ?? 5);
         setLongBreakDurationState(settings.longBreakDuration ?? 15);
-        setPenaltyTypeState(settings.penaltyType ?? 'warning');
+        setPenaltyTypeState(sanitizePenaltyType(settings.penaltyType));
         setSoundEnabledState(settings.soundEnabled ?? true);
         setVibrationEnabledState(settings.vibrationEnabled ?? true);
         setBreakCycleCount(settings.breakCycleCount ?? 0);

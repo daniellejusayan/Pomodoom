@@ -19,6 +19,7 @@ export function FocusDurationCard({ focusDuration, setFocusDuration }: FocusDura
         <Ionicons name="timer-outline" size={20} color={colors.primary} />
         <Text style={styles.sectionTitle}>Focus Duration</Text>
       </View>
+      <Text style={styles.sectionDescription}>Choose how long to stay locked in for this session.</Text>
       <View style={styles.chipsContainer}>
         {focusDurationsMinutes.map((item) => (
           <Chip

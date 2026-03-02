@@ -28,6 +28,11 @@ export const usePenaltySystem = () => {
     timeAdded?: number
   ): string => {
     switch (type) {
+      case 'none':
+        return reason === 'pause'
+          ? 'Session paused.'
+          : 'Session stopped.';
+
       case 'warning':
         return reason === 'pause' 
           ? "You're about to pause your session. Are you sure?"
@@ -40,6 +45,11 @@ export const usePenaltySystem = () => {
         return reason === 'pause'
           ? `Session paused. As a penalty, ${timeAdded} minutes have been added to your timer.`
           : `You chose to stop your session. As a penalty, ${timeAdded} minutes were added before returning to Home Timer.`;
+
+      case 'lockMode':
+        return reason === 'pause'
+          ? 'Lock Mode is active. Hard app-lock is coming soon, but this interruption is still recorded.'
+          : 'Lock Mode is active. Hard app-lock is coming soon, but stopping now still counts as an interruption.';
       
       default:
         return "Session interrupted.";
@@ -75,6 +85,13 @@ export const usePenaltySystem = () => {
   ): PenaltyAction | null => {
     // Log the penalty application for debugging
     console.log('Applying penalty:', penaltyType, 'for reason:', reason);
+
+    if (penaltyType === 'none') {
+      const interruptionReason = reason === 'pause' ? 'manual_pause' : 'manual_stop';
+      recordInterruption(sessionId, interruptionReason);
+      return null;
+    }
+
     // Trigger haptic feedback if enabled
     if (vibrationEnabled) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -118,6 +135,12 @@ export const usePenaltySystem = () => {
           message: getPenaltyMessage('addTime', reason, timeAdded),
           timeAddedMinutes: timeAdded,
           pauseCount: reason === 'pause' ? sessionPauseCount + 1 : sessionPauseCount,
+        };
+
+      case 'lockMode':
+        return {
+          type: 'lockMode',
+          message: getPenaltyMessage('lockMode', reason),
         };
 
       default:

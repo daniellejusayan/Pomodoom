@@ -91,6 +91,12 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
           iconColor: colors.warning || '#F39C12',
           title: 'Time Added',
         };
+      case 'lockMode':
+        return {
+          icon: 'lock-closed' as const,
+          iconColor: colors.primary,
+          title: 'Lock Mode',
+        };
       default:
         return {
           icon: 'information-circle' as const,
@@ -178,7 +184,7 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
                 onPress={onConfirm}
               >
                 <Text style={styles.confirmButtonText}>
-                  {penaltyType === 'warning' && showCancel ? 'Continue' : 'OK'}
+                  {penaltyType === 'warning' && showCancel ? 'Continue' : penaltyType === 'lockMode' ? 'Stay in Focus' : 'OK'}
                 </Text>
               </TouchableOpacity>
             </View>

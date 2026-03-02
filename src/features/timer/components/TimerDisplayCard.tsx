@@ -6,7 +6,7 @@ import { colors } from '../../../core/theme/colors';
 import { Button, ProgressRing, Text } from '../../../shared/components';
 import { styles } from '../screens/HomeTimerScreen.styles';
 
-type TimerPhase = 'idle' | 'focus' | 'break';
+type TimerPhase = 'idle' | 'focus' | 'break' | 'longBreak';
 
 interface TimerDisplayCardProps {
   currentPhase: TimerPhase;
@@ -15,11 +15,11 @@ interface TimerDisplayCardProps {
   circleOpacity: Animated.Value;
   displayTime: string | number;
   timerMessage: string;
-  isNextBreakLong: boolean;
   onStart: () => void;
   onStop: () => void;
   onPause: () => void;
   onStartBreak: () => void;
+  onStartLongBreak: () => void;
 }
 
 export function TimerDisplayCard({
@@ -29,14 +29,14 @@ export function TimerDisplayCard({
   circleOpacity,
   displayTime,
   timerMessage,
-  isNextBreakLong,
   onStart,
   onStop,
   onPause,
   onStartBreak,
+  onStartLongBreak,
 }: TimerDisplayCardProps) {
   const ringGradient =
-    currentPhase === 'break'
+    currentPhase === 'break' || currentPhase === 'longBreak'
       ? [colors.success, colors.primary]
       : [colors.primaryLight, colors.primaryDeep];
 
@@ -60,9 +60,29 @@ export function TimerDisplayCard({
       <Text style={styles.timerMessage}>{timerMessage}</Text>
 
       {currentPhase === 'idle' ? (
-        <Button onPress={onStart} fullWidth style={styles.primaryButton} textStyle={styles.primaryButtonText}>
-          Start Focus
-        </Button>
+        <>
+          <Button onPress={onStart} fullWidth style={styles.primaryButton} textStyle={styles.primaryButtonText}>
+            Start Focus
+          </Button>
+          <Button
+            onPress={onStartBreak}
+            variant="secondary"
+            fullWidth
+            style={styles.secondaryButton}
+            textStyle={styles.secondaryButtonText}
+          >
+            Start Break
+          </Button>
+          <Button
+            onPress={onStartLongBreak}
+            variant="secondary"
+            fullWidth
+            style={styles.secondaryButton}
+            textStyle={styles.secondaryButtonText}
+          >
+            Start Long Break
+          </Button>
+        </>
       ) : (
         <View style={styles.controlRow}>
           <Button
@@ -100,18 +120,6 @@ export function TimerDisplayCard({
             </Button>
           )}
         </View>
-      )}
-
-      {currentPhase === 'idle' && (
-        <Button
-          onPress={onStartBreak}
-          variant="secondary"
-          fullWidth
-          style={styles.secondaryButton}
-          textStyle={styles.secondaryButtonText}
-        >
-          {isNextBreakLong ? 'Start Long Break' : 'Start Break'}
-        </Button>
       )}
     </View>
   );

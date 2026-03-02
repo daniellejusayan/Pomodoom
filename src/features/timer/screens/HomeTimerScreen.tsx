@@ -1,4 +1,4 @@
-import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   SafeAreaView,
@@ -18,6 +18,8 @@ import type { PenaltyAction } from '../../penalties/types/PenaltyTypes';
 import { AppState, AppStateStatus } from 'react-native';
 import { useSettings } from '../../../context/SettingsContext';
 import { playAlarm, triggerVibration } from '../../../core/utils/alerts';
+import { getHomeTutorialDismissedFlag, setHomeTutorialDismissedFlag } from '../../../services/storage';
+import { GuidancePopup } from '../../../shared/components';
 import { useTimer } from '../../../shared/hooks/useTimer';
 import { FocusDurationCard } from '../components/FocusDurationCard';
 import { TimerDisplayCard } from '../components/TimerDisplayCard';
@@ -25,10 +27,12 @@ import { TimerHeader } from '../components/TimerHeader';
 import { styles } from './HomeTimerScreen.styles';
 
 type Nav = NativeStackNavigationProp<TimerStackParamList, typeof ROUTES.TIMER.HOME>;
-type TimerPhase = 'idle' | 'focus' | 'break';
+type HomeRoute = RouteProp<TimerStackParamList, typeof ROUTES.TIMER.HOME>;
+type TimerPhase = 'idle' | 'focus' | 'break' | 'longBreak';
 
 export default function HomeTimerScreen() {
   const navigation = useNavigation<Nav>();
+  const route = useRoute<HomeRoute>();
 
   const [currentPhase, setCurrentPhase] = useState<TimerPhase>('idle');
   const completionHandledRef = useRef(false);
@@ -74,7 +78,31 @@ export default function HomeTimerScreen() {
   const [penaltyAlert, setPenaltyAlert] = useState<PenaltyAction | null>(null);
   const [pendingAction, setPendingAction] = useState<'pause' | 'stop' | null>(null);
   const [sessionStopCount, setSessionStopCount] = useState(0); // 🆕 Track stop attempts in current session
+  const [showHomeGuide, setShowHomeGuide] = useState(false);
   const sessionIdRef = useRef<string>(Date.now().toString());
+
+  const homeGuideSteps = [
+    'Choose your focus duration before starting.',
+    'Press Start Session and stay with one task.',
+    'Take a break or long break, then run it back.',
+  ];
+
+  useEffect(() => {
+    const loadGuideState = async () => {
+      const isDismissed = await getHomeTutorialDismissedFlag();
+      setShowHomeGuide(!isDismissed);
+    };
+
+    loadGuideState();
+  }, []);
+
+  useEffect(() => {
+    if (!route.params?.replayTutorial) return;
+
+    setShowHomeGuide(true);
+    setHomeTutorialDismissedFlag(false);
+    navigation.setParams({ replayTutorial: undefined });
+  }, [route.params?.replayTutorial, navigation]);
 
   useEffect(() => {
     if (currentPhase === 'idle') {
@@ -231,14 +259,12 @@ export default function HomeTimerScreen() {
       // Generate new session ID for next session
       sessionIdRef.current = Date.now().toString();
     } else if (currentPhase === 'break') {
-      // update break cycle/long break stats
-      if (breakCycleCount >= 2) {
-        // just finished a long break
-        incrementLongBreaks();
-        resetBreakCycle();
-      } else {
-        incrementBreakCycle();
-      }
+      incrementBreakCycle();
+      setCurrentPhase('idle');
+      reset(focusDuration * 60);
+    } else if (currentPhase === 'longBreak') {
+      incrementLongBreaks();
+      resetBreakCycle();
       setCurrentPhase('idle');
       reset(focusDuration * 60);
     }
@@ -293,6 +319,14 @@ export default function HomeTimerScreen() {
           pause();
         }
         break;
+
+      case 'lockMode':
+        if (pendingAction === 'pause') {
+          pause();
+        } else if (pendingAction === 'stop') {
+          finishSession();
+        }
+        break;
     }
 
     setPenaltyAlert(null);
@@ -306,12 +340,17 @@ export default function HomeTimerScreen() {
     // Don't pause/stop - user cancelled
   };
 
-  const isNextBreakLong = breakCycleCount >= 2; // compute eligibility
-
   const handleStartBreak = () => {
     setCurrentPhase('break');
-    // determine duration: if eligible for long break
-    const secs = (isNextBreakLong ? longBreakDuration : breakDuration) * 60;
+    const secs = breakDuration * 60;
+    reset(secs);
+    circleOpacity.setValue(1);
+    start();
+  };
+
+  const handleStartLongBreak = () => {
+    setCurrentPhase('longBreak');
+    const secs = longBreakDuration * 60;
     reset(secs);
     circleOpacity.setValue(1);
     start();
@@ -352,13 +391,20 @@ const handlePenaltyGoBack = () => {
 
   const timerMessage = useMemo(() => {
     if (currentPhase === 'idle') {
-      return `${focusDuration} min focus • ${breakDuration} min break`;
+      return `${focusDuration}m focus • ${breakDuration}m break`;
     } else if (currentPhase === 'focus') {
-      return isRunning ? 'Stay focused!' : 'Focus paused';
+      return isRunning ? 'One task only. Protect this focus sprint.' : 'Paused. Resume to keep momentum.';
+    } else if (currentPhase === 'longBreak') {
+      return isRunning ? 'Long break running. Recover fully before your next sprint.' : 'Long break paused. Resume when ready.';
     } else {
-      return isRunning ? 'Take a break' : 'Break paused';
+      return isRunning ? 'Recharge now so your next sprint feels easier.' : 'Break paused. Resume when ready.';
     }
   }, [currentPhase, focusDuration, breakDuration, isRunning]);
+
+  const dismissHomeGuide = async () => {
+    setShowHomeGuide(false);
+    await setHomeTutorialDismissedFlag(true);
+  };
 
   return (
     <LinearGradient
@@ -375,11 +421,11 @@ const handlePenaltyGoBack = () => {
           circleOpacity={circleOpacity}
           displayTime={displayTime}
           timerMessage={timerMessage}
-          isNextBreakLong={isNextBreakLong}
           onStart={handleStart}
           onStop={handleStop}
           onPause={handlePause}
           onStartBreak={handleStartBreak}
+          onStartLongBreak={handleStartLongBreak}
         />
 
         {currentPhase === 'idle' && (
@@ -404,6 +450,15 @@ const handlePenaltyGoBack = () => {
           // 🆕 ADDED: Pass stop action props
           isStopAction={pendingAction === 'stop'}
           onGoBack={pendingAction === 'stop' ? handlePenaltyGoBack : undefined}
+        />
+
+        <GuidancePopup
+          visible={showHomeGuide}
+          onClose={dismissHomeGuide}
+          title="How Pomodoom Works"
+          description="Quick setup to stay on track"
+          steps={homeGuideSteps}
+          footnote="Replay this anytime from Settings."
         />
       </SafeAreaView>
     </LinearGradient>

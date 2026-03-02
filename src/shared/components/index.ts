@@ -4,5 +4,6 @@ export * from './Card';
 export * from './Chip';
 export * from './ProgressRing';
 export * from './Modal';
+export * from './GuidancePopup';
 export * from './EmptyState';
 export * from './Switch';
