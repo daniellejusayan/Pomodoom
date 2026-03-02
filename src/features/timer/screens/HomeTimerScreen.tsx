@@ -2,17 +2,12 @@ import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   SafeAreaView,
-  StyleSheet,
-  View,
   Animated,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 
-import { focusDurationsMinutes } from '../../../core/constants';
 import { colors } from '../../../core/theme/colors';
-import { spacing } from '../../../core/theme/spacing';
 import { ROUTES } from '../../../navigation/routes';
 import { TimerStackParamList } from '../../../navigation/types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,7 +19,10 @@ import type { PenaltyAction } from '../../penalties/types/PenaltyTypes';
 import { AppState, AppStateStatus } from 'react-native';
 import { useSettings } from '../../../context/SettingsContext';
 import { playAlarm, triggerVibration } from '../../../core/utils/alerts';
-import { Button, Card, Chip, Text } from '../../../shared/components';
+import { FocusDurationCard } from '../components/FocusDurationCard';
+import { TimerDisplayCard } from '../components/TimerDisplayCard';
+import { TimerHeader } from '../components/TimerHeader';
+import { styles } from './HomeTimerScreen.styles';
 
 type Nav = NativeStackNavigationProp<TimerStackParamList, typeof ROUTES.TIMER.HOME>;
 type TimerPhase = 'idle' | 'focus' | 'break';
@@ -154,14 +152,15 @@ export default function HomeTimerScreen() {
 
   // 🎯 TIMER CONTROLS
   const handleStart = () => {
-// 🧪 TEMPORARY: Skip timer and go directly to Session Complete screen
-  // ⚠️ REMOVE THIS BLOCK TO RESTORE NORMAL TIMER FUNCTIONALITY
-  navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, { 
-    sessionId: Date.now().toString(),
-    pauseCount: sessionPauseCount,
-  });
-  return; // Exit early, skipping all the timer logic below
-  // ⚠️ END OF TEMPORARY CODE
+// // 🧪 TEMPORARY: Skip timer and go directly to Session Complete screen
+//   // ⚠️ REMOVE THIS BLOCK TO RESTORE NORMAL TIMER FUNCTIONALITY
+//   navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, { 
+//     sessionId: Date.now().toString(),
+//     pauseCount: sessionPauseCount,
+//   });
+//   return; // Exit early, skipping all the timer logic below
+//   // ⚠️ END OF TEMPORARY CODE
+  
       if (currentPhase === 'idle') {
       // Create new session ID
       sessionIdRef.current = Date.now().toString();
@@ -397,145 +396,32 @@ const handlePenaltyGoBack = () => {
       style={{ flex: 1 }}
     >
       <SafeAreaView style={styles.container}>
-        <View style={styles.headerRow}>
-          <Text style={styles.heading}>
-            {currentPhase === 'focus' ? 'Focus Mode' : 
-             currentPhase === 'break' ? 'Break Time' : 
-             'Ready to Focus?'}
-          </Text>
-          <Text style={styles.subhead}>
-            {currentPhase === 'idle' ? 'Pick your intervals and start' : ''}
-            </Text>
-        </View>
+        <TimerHeader currentPhase={currentPhase} />
 
-        {/* 🎯 TIMER DISPLAY CARD */}
-        <View style={styles.timerCard}>
-          <Animated.View style={[
-            styles.timerCircleOuter,
-            currentPhase === 'focus' && styles.timerCircleFocus,
-            currentPhase === 'break' && styles.timerCircleBreak,
-            { opacity: circleOpacity },
-          ]}>
-            {/* progress circle */}
-            {currentPhase !== 'idle' && (
-              <AnimatedSvg
-                width={CIRCLE_RADIUS * 2}
-                height={CIRCLE_RADIUS * 2}
-                style={StyleSheet.absoluteFill}
-              >
-                <AnimatedCircle
-                  cx={CIRCLE_RADIUS}
-                  cy={CIRCLE_RADIUS}
-                  r={CIRCLE_RADIUS - STROKE_WIDTH / 2}
-                  stroke={currentPhase === 'focus' ? colors.primary : colors.success}
-                  strokeWidth={STROKE_WIDTH}
-                  strokeDasharray={`${circumference} ${circumference}`}
-                  strokeDashoffset={dashOffset}
-                  strokeLinecap="round"
-                  rotation="-90"
-                  originX={CIRCLE_RADIUS}
-                  originY={CIRCLE_RADIUS}
-                />
-              </AnimatedSvg>
-            )}
-            <View style={styles.timerCircleInner}>
-              <Text style={styles.timerValue}>{displayTime}</Text>
-              <Text style={styles.timerLabel}>
-                {currentPhase === 'idle' ? 'minutes' : ''}
-              </Text>
-            </View>
-          </Animated.View>
-          
-          <Text style={styles.timerMessage}>{timerMessage}</Text>
+        <TimerDisplayCard
+          currentPhase={currentPhase}
+          isRunning={isRunning}
+          circleOpacity={circleOpacity}
+          displayTime={displayTime}
+          timerMessage={timerMessage}
+          isNextBreakLong={isNextBreakLong}
+          onStart={handleStart}
+          onStop={handleStop}
+          onPause={handlePause}
+          onStartBreak={handleStartBreak}
+          AnimatedSvg={AnimatedSvg}
+          AnimatedCircle={AnimatedCircle}
+          CIRCLE_RADIUS={CIRCLE_RADIUS}
+          STROKE_WIDTH={STROKE_WIDTH}
+          circumference={circumference}
+          dashOffset={dashOffset}
+        />
 
-          {/* 🎯 TIMER CONTROLS */}
-          {currentPhase === 'idle' ? (
-            <>
-              <Button
-                onPress={handleStart}
-                fullWidth
-                style={styles.primaryButton}
-                textStyle={styles.primaryButtonText}
-              >
-                Start Focus
-              </Button>
-            </>
-          ) : (
-            <View style={styles.controlRow}>
-              <Button
-                onPress={handleStop}
-                variant="outline"
-                fullWidth
-                style={styles.controlButton}
-                textStyle={styles.controlButtonText}
-                icon={<Ionicons name="stop" size={22} color={colors.danger} />}
-              >
-                Stop
-              </Button>
-
-              {isRunning ? (
-                <Button
-                  onPress={handlePause}
-                  variant="outline"
-                  fullWidth
-                  style={styles.controlButton}
-                  textStyle={styles.controlButtonText}
-                  icon={<Ionicons name="pause" size={22} color={colors.primary} />}
-                >
-                  Pause
-                </Button>
-              ) : (
-                <Button
-                  onPress={handleStart}
-                  variant="outline"
-                  fullWidth
-                  style={styles.controlButton}
-                  textStyle={styles.controlButtonText}
-                  icon={<Ionicons name="play" size={22} color={colors.primary} />}
-                >
-                  Resume
-                </Button>
-              )}
-            </View>
-          )}
-
-        {/* Break button (only show after focus complete) */}
-          {currentPhase === 'idle' && (
-            <Button
-              onPress={handleStartBreak}
-              variant="secondary"
-              fullWidth
-              style={styles.secondaryButton}
-              textStyle={styles.secondaryButtonText}
-            >
-              {isNextBreakLong ? 'Start Long Break' : 'Start Break'}
-            </Button>
-          )}
-        </View>
-
-        {/* 🎯 FOCUS DURATION SELECTOR - Only show when idle */}
         {currentPhase === 'idle' && (
-          <>
-            <Card>
-              <View style={styles.cardHeader}>
-                <Ionicons name="timer-outline" size={20} color={colors.primary} />
-                <Text style={styles.sectionTitle}>Focus Duration</Text>
-              </View>
-              <View style={styles.chipsContainer}>
-                {focusDurationsMinutes.map((item) => {
-                  const isActive = item === focusDuration;
-                  return (
-                    <Chip
-                      key={item}
-                      label={`${item}m`}
-                      selected={isActive}
-                      onPress={() => setFocusDuration(item)}
-                    />
-                  );
-                })}
-              </View>
-            </Card>
-          </>
+          <FocusDurationCard
+            focusDuration={focusDuration}
+            setFocusDuration={setFocusDuration}
+          />
         )}
 
         {/* 🆕 Penalty Alert Modal */}
@@ -558,184 +444,3 @@ const handlePenaltyGoBack = () => {
     </LinearGradient>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    padding: spacing.xl,
-    gap: spacing.xl,
-  },
-  headerRow: {
-    gap: spacing.xs,
-    marginTop: spacing.xxl*2,
-  },
-  heading: {
-    color: colors.textPrimary,
-    fontSize: 24,
-    fontWeight: '800',
-    alignSelf: 'center',
-  },
-  subhead: {
-    color: colors.textSecondary,
-    fontSize: 15,
-    alignSelf: 'center',
-  },
-  timerCard: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    padding: spacing.xl,
-    alignItems: 'center',
-    gap: spacing.md,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 12 },
-    shadowRadius: 24,
-    elevation: 10,
-  },
-  timerCircleOuter: {
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0B1224',
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  // 🆕 Different colors for different phases
-  timerCircleFocus: {
-    shadowColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  timerCircleBreak: {
-    shadowColor: colors.success,
-    borderColor: colors.success,
-  },
-  timerCircleInner: {
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceElevated,
-  },
-  timerValue: {
-    color: colors.textPrimary,
-    fontSize: 54,
-    fontWeight: '800',
-  },
-  timerLabel: {
-    color: colors.textSecondary,
-    fontSize: 14,
-  },
-  timerMessage: {
-    color: colors.textSecondary,
-    fontSize: 15,
-  },
-
-  // 🆕 Control buttons row
-  controlRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    width: '100%',
-  },
-  controlButton: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    paddingVertical: spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  controlButtonText: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-
-  primaryButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xxl,
-    borderRadius: 14,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.35,
-    shadowOffset: { width: 0, height: 10 },
-    shadowRadius: 20,
-    elevation: 8,
-    width: '100%',
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xxl,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    width: '100%',
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 10 },
-    shadowRadius: 18,
-    elevation: 6,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  sectionTitle: {
-    color: colors.textPrimary,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  chipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  chipTextActive: {
-    color: '#fff',
-  },
-});
