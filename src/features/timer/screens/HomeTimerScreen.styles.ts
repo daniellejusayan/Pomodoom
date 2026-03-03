@@ -13,6 +13,8 @@ export const styles = StyleSheet.create({
   headerRow: {
     gap: spacing.xs,
     marginTop: spacing.xxl * 2,
+    alignItems: 'center',          // center texts horizontally
+    justifyContent: 'center',      // center vertically if row direction changes
   },
   heading: {
     color: colors.textPrimary,
@@ -153,5 +155,10 @@ export const styles = StyleSheet.create({
   },
   coachSecondaryAction: {
     flex: 1,
+  },
+  todoContainer: {
+    width: '100%',
+    marginTop: spacing.md,
+     marginBottom: spacing.xl, // 🔧 ADDED: Extra bottom margin
   },
 });

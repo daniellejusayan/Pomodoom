@@ -19,7 +19,9 @@ interface TimerDisplayCardProps {
   onStop: () => void;
   onPause: () => void;
   onStartBreak: () => void;
-  onStartLongBreak: () => void;
+  breakCycleCount: number; // Added to determine break vs long break
+  breakDuration: number;
+  longBreakDuration: number;
 }
 
 export function TimerDisplayCard({
@@ -33,13 +35,18 @@ export function TimerDisplayCard({
   onStop,
   onPause,
   onStartBreak,
-  onStartLongBreak,
+  breakCycleCount,
+  breakDuration,        // currently unused but available
+  longBreakDuration,    // currently unused but available
 }: TimerDisplayCardProps) {
   const ringGradient =
     currentPhase === 'break' || currentPhase === 'longBreak'
       ? [colors.success, colors.primary]
       : [colors.primaryLight, colors.primaryDeep];
 
+  // 🆕 Determine if it's time for long break
+  const isLongBreakTime = breakCycleCount >= 2;
+  const breakButtonText = isLongBreakTime ? 'Start Long Break' : 'Start Break';
   return (
     <View style={styles.timerCard}>
       <Animated.View style={{ opacity: circleOpacity }}>
@@ -52,7 +59,6 @@ export function TimerDisplayCard({
         >
           <View style={styles.timerRingCenter}>
             <Text style={styles.timerValue}>{displayTime}</Text>
-            <Text style={styles.timerLabel}>{currentPhase === 'idle' ? 'minutes' : ''}</Text>
           </View>
         </ProgressRing>
       </Animated.View>
@@ -61,7 +67,10 @@ export function TimerDisplayCard({
 
       {currentPhase === 'idle' ? (
         <>
-          <Button onPress={onStart} fullWidth style={styles.primaryButton} textStyle={styles.primaryButtonText}>
+          <Button onPress={onStart} 
+            fullWidth 
+            style={styles.primaryButton} 
+            textStyle={styles.primaryButtonText}>
             Start Focus
           </Button>
           <Button
@@ -71,16 +80,7 @@ export function TimerDisplayCard({
             style={styles.secondaryButton}
             textStyle={styles.secondaryButtonText}
           >
-            Start Break
-          </Button>
-          <Button
-            onPress={onStartLongBreak}
-            variant="secondary"
-            fullWidth
-            style={styles.secondaryButton}
-            textStyle={styles.secondaryButtonText}
-          >
-            Start Long Break
+            {breakButtonText}
           </Button>
         </>
       ) : (

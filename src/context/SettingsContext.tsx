@@ -24,6 +24,8 @@ interface SettingsContextType {
   
   // Penalty settings
   penaltyType: PenaltyType;
+  penaltyTypeUsage: Record<PenaltyType, number>;
+  recordPenaltyUsage: (type: PenaltyType) => Promise<void>;
   
   // Feedback settings
   soundEnabled: boolean;
@@ -64,6 +66,13 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const [breakDuration, setBreakDurationState] = useState(5);
   const [longBreakDuration, setLongBreakDurationState] = useState(15);
   const [penaltyType, setPenaltyTypeState] = useState<PenaltyType>('none');
+  const [penaltyTypeUsage, setPenaltyTypeUsage] = useState<Record<PenaltyType, number>>({
+    none: 0,
+    warning: 0,
+    resetTimer: 0,
+    addTime: 0,
+    lockMode: 0,
+  });
   const [soundEnabled, setSoundEnabledState] = useState(true);
   const [vibrationEnabled, setVibrationEnabledState] = useState(true);
   // stats
@@ -89,6 +98,11 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         setBreakDurationState(settings.breakDuration ?? 5);
         setLongBreakDurationState(settings.longBreakDuration ?? 15);
         setPenaltyTypeState(sanitizePenaltyType(settings.penaltyType));
+        setPenaltyTypeUsage(settings.penaltyTypeUsage ?? {
+          warning: 0,
+          resetTimer: 0,
+          addTime: 0,
+        });
         setSoundEnabledState(settings.soundEnabled ?? true);
         setVibrationEnabledState(settings.vibrationEnabled ?? true);
         setBreakCycleCount(settings.breakCycleCount ?? 0);
@@ -178,6 +192,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       breakDuration,
       longBreakDuration,
       penaltyType: type,
+      penaltyTypeUsage,
       soundEnabled,
       vibrationEnabled,
       breakCycleCount,
@@ -189,6 +204,33 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  // increment usage counter and persist
+  const recordPenaltyUsage = async (type: PenaltyType) => {
+    setPenaltyTypeUsage(prev => {
+      const next = {
+        ...prev,
+        [type]: (prev[type] || 0) + 1,
+      } as Record<PenaltyType, number>;
+      // save with updated counts
+      saveSettings({
+        focusDuration,
+        breakDuration,
+        longBreakDuration,
+        penaltyType,
+        penaltyTypeUsage: next,
+        soundEnabled,
+        vibrationEnabled,
+        breakCycleCount,
+        longBreaksCompleted,
+        totalSessions,
+        totalInterruptions,
+        firstUseDate,
+        dailySessions,
+      });
+      return next;
+    });
+  };
+
   const setSoundEnabled = async (enabled: boolean) => {
     setSoundEnabledState(enabled);
     await saveSettings({
@@ -196,6 +238,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       breakDuration,
       longBreakDuration,
       penaltyType,
+      penaltyTypeUsage,
       soundEnabled: enabled,
       vibrationEnabled,
       breakCycleCount,
@@ -214,6 +257,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       breakDuration,
       longBreakDuration,
       penaltyType,
+      penaltyTypeUsage,
       soundEnabled,
       vibrationEnabled: enabled,
       breakCycleCount,
@@ -233,6 +277,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         breakDuration,
         longBreakDuration,
         penaltyType,
+        penaltyTypeUsage,
         soundEnabled,
         vibrationEnabled,
         breakCycleCount: next,
@@ -253,6 +298,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       breakDuration,
       longBreakDuration,
       penaltyType,
+      penaltyTypeUsage,
       soundEnabled,
       vibrationEnabled,
       breakCycleCount: 0,
@@ -272,6 +318,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         breakDuration,
         longBreakDuration,
         penaltyType,
+        penaltyTypeUsage,
         soundEnabled,
         vibrationEnabled,
         breakCycleCount,
@@ -294,6 +341,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         breakDuration,
         longBreakDuration,
         penaltyType,
+        penaltyTypeUsage,
         soundEnabled,
         vibrationEnabled,
         breakCycleCount,
@@ -318,6 +366,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         breakDuration,
         longBreakDuration,
         penaltyType,
+        penaltyTypeUsage,
         soundEnabled,
         vibrationEnabled,
         breakCycleCount,
@@ -346,6 +395,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         breakDuration,
         longBreakDuration,
         penaltyType,
+        penaltyTypeUsage,
         soundEnabled,
         vibrationEnabled,
         breakCycleCount,
@@ -366,6 +416,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         breakDuration,
         longBreakDuration,
         penaltyType,
+        penaltyTypeUsage,
         soundEnabled,
         vibrationEnabled,
         breakCycleCount,
@@ -380,6 +431,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         setPenaltyType,
         setSoundEnabled,
         setVibrationEnabled,
+        recordPenaltyUsage,
         incrementBreakCycle,
         resetBreakCycle,
         incrementLongBreaks,

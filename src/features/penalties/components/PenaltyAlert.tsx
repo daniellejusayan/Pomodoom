@@ -24,6 +24,8 @@ interface PenaltyAlertProps {
   isStopAction?: boolean;
   showCancel?: boolean;
   onGoBack?: () => void;
+  onSkipToBreak?: () => void; // 🆕 ADDED
+  breakCycleCount?: number; // 🆕 ADDED
 }
 
 export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
@@ -35,6 +37,8 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
   showCancel = true,
   isStopAction = false,
   onGoBack,
+  onSkipToBreak, // 🆕 ADDED
+  breakCycleCount = 0, // 🆕 ADDED
 }) => {
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
   const { vibrationEnabled, soundEnabled } = useSettings();
@@ -107,6 +111,9 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
   };
 
   const alertStyle = getAlertStyle();
+    // 🆕 Determine break type text
+  const isLongBreakTime = breakCycleCount >= 2;
+  const breakText = isLongBreakTime ? 'Long Break' : 'Break';
 
   return (
     <Modal
@@ -139,9 +146,21 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
 
           {/* Buttons */}
           {/* 🔄 CHANGED: Different button layouts based on action type */}
-          {isStopAction && onGoBack ? (
+          {isStopAction && onGoBack && onSkipToBreak ? (
             // 🆕 STOP ACTION: Show "Accept Penalty" and "Go Back" buttons
             <View style={styles.buttonColumn}>
+              {/* Skip to Break */} 
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.confirmButton,
+                  { backgroundColor: colors.success },
+                ]}
+                onPress={onSkipToBreak}
+              >
+                <Ionicons name="cafe" size={20} color="#fff" />
+                <Text style={styles.confirmButtonText}>Skip to {breakText}</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.button,
@@ -150,9 +169,9 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
                 ]}
                 onPress={onConfirm}
               >
+                <Ionicons name="checkmark-circle" size={20} color="#fff" />
                 <Text style={styles.confirmButtonText}>Finish Session</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={[styles.button, styles.goBackButton]}
                 onPress={onGoBack}
@@ -272,7 +291,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   confirmButton: {
-    // Background color set dynamically
+    flexDirection: 'row', // 🆕 ADDED: For icon + text layout
+    gap: spacing.xs, // 🆕 ADDED: Space between icon and text
+    alignItems: 'center', // 🆕 ADDED
+  justifyContent: 'center', // 🆕 ADDED
   },
   confirmButtonText: {
     color: '#fff',

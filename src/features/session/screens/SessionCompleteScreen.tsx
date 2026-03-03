@@ -21,7 +21,7 @@ type Route = RouteProp<TimerStackParamList, typeof ROUTES.TIMER.SESSION_COMPLETE
 export default function SessionCompleteScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { vibrationEnabled, soundEnabled, addSessionInterruptions } = useSettings();
+  const { vibrationEnabled, soundEnabled, addSessionInterruptions, penaltyType, recordPenaltyUsage } = useSettings();
   const recordedSessionRef = React.useRef<string | null>(null);
 
   // read pauseCount from params
@@ -35,10 +35,13 @@ export default function SessionCompleteScreen() {
     }
 
     recordedSessionRef.current = sessionId;
+    // always log which penalty was active during this session
+    recordPenaltyUsage(penaltyType);
+
     if (safePauseCount > 0) {
       addSessionInterruptions(safePauseCount);
     }
-  }, [sessionId, safePauseCount, addSessionInterruptions]);
+  }, [sessionId, safePauseCount, addSessionInterruptions, penaltyType, recordPenaltyUsage]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -114,7 +117,7 @@ export default function SessionCompleteScreen() {
 
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>Penalties:</Text>
-                <Text style={styles.statValue}>None</Text>
+                <Text style={styles.statValue}>{penaltyType}</Text>
               </View>
             </View>
           </Card>
@@ -187,16 +190,19 @@ const styles = StyleSheet.create({
   },
 
     // 🆕 ADDED: Illustration container
+
   illustrationContainer: {
-    width: 360,
-    height: 180,
-    marginBottom: spacing.sm,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
 
   // 🆕 ADDED: Illustration image
   illustration: {
-    width: '100%',
-    height: '100%',
+    width: 250,
+    height: 250,
+    transform: [{ scale: 1.8 }],
   },
 
   title: {

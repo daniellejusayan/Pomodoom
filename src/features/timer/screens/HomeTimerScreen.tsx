@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   SafeAreaView,
   Animated,
+  View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -21,8 +22,8 @@ import { playAlarm, triggerVibration } from '../../../core/utils/alerts';
 import { getHomeTutorialDismissedFlag, setHomeTutorialDismissedFlag } from '../../../services/storage';
 import { GuidancePopup } from '../../../shared/components';
 import { useTimer } from '../../../shared/hooks/useTimer';
-import { FocusDurationCard } from '../components/FocusDurationCard';
 import { TimerDisplayCard } from '../components/TimerDisplayCard';
+import { ToDoList } from '../../../shared/components/ToDoList';
 import { TimerHeader } from '../components/TimerHeader';
 import { styles } from './HomeTimerScreen.styles';
 
@@ -64,6 +65,8 @@ export default function HomeTimerScreen() {
   
   const {
     penaltyType: currentPenaltyType,
+    penaltyTypeUsage,
+    recordPenaltyUsage,
     breakCycleCount,
     longBreaksCompleted,
     longBreakDuration,
@@ -199,14 +202,28 @@ export default function HomeTimerScreen() {
       setPenaltyAlert(penalty);
     } else {
       // No penalty set, finish session immediately
-      finishSession();
+      showStopOptions();
     }
   };
+
+  // 🆕 Show options when stopping: Skip to Break, Finish Session, Return to Timer
+const showStopOptions = () => {
+  // This will be handled by the PenaltyAlert component with custom buttons
+  const isLongBreakTime = breakCycleCount >= 2;
+  const breakType = isLongBreakTime ? 'long break' : 'break';
+  
+  setPenaltyAlert({
+    type: 'warning', // Use warning type to show custom buttons
+    message: `You're stopping your focus session. What would you like to do?`,
+  });
+};
 
   // 🆕 Finish current focus session (presence of penalty handled separately)
   const finishSession = () => {
     // increment session count for stats
     incrementSessions();
+    // record penalty type usage in case user never visits the complete screen
+    recordPenaltyUsage(currentPenaltyType);
     // navigate to summary
     navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, {
       sessionId: sessionIdRef.current,
@@ -340,6 +357,21 @@ export default function HomeTimerScreen() {
     // Don't pause/stop - user cancelled
   };
 
+  // 🆕 Handle "Skip to Break" option
+  const handleSkipToBreak = () => {
+    setPenaltyAlert(null);
+    setPendingAction(null);
+    
+    // Determine if it's time for long break
+    const isLongBreakTime = breakCycleCount >= 2;
+    
+    if (isLongBreakTime) {
+      handleStartLongBreak();
+    } else {
+      handleStartBreak();
+    }
+  };
+
   const handleStartBreak = () => {
     setCurrentPhase('break');
     const secs = breakDuration * 60;
@@ -373,7 +405,7 @@ const handlePenaltyGoBack = () => {
     const secs = focusDuration * 60;
     reset(secs);
     pause();
-  } else if (type === 'addTime' && added) {
+  } else if (type === 'addTime' && added) {start
     // Add penalty time then resume
     const additionalSeconds = added * 60;
     set(secondsLeft + additionalSeconds);
@@ -389,17 +421,21 @@ const handlePenaltyGoBack = () => {
     ? focusDuration 
     : formatted;
 
-  const timerMessage = useMemo(() => {
-    if (currentPhase === 'idle') {
-      return `${focusDuration}m focus • ${breakDuration}m break`;
-    } else if (currentPhase === 'focus') {
-      return isRunning ? 'One task only. Protect this focus sprint.' : 'Paused. Resume to keep momentum.';
-    } else if (currentPhase === 'longBreak') {
-      return isRunning ? 'Long break running. Recover fully before your next sprint.' : 'Long break paused. Resume when ready.';
-    } else {
-      return isRunning ? 'Recharge now so your next sprint feels easier.' : 'Break paused. Resume when ready.';
-    }
-  }, [currentPhase, focusDuration, breakDuration, isRunning]);
+// 🔄 MODIFIED: Update timer message to remove duration text
+const timerMessage = useMemo(() => {
+  if (currentPhase === 'idle') {
+    const isLongBreakTime = breakCycleCount >= 2;
+    return isLongBreakTime 
+      ? 'Ready for a long break?' 
+      : 'Ready to focus?';
+  } else if (currentPhase === 'focus') {
+    return isRunning ? 'One task only. Protect this focus sprint.' : 'Paused. Resume to keep momentum.';
+  } else if (currentPhase === 'longBreak') {
+    return isRunning ? 'Long break running. Recover fully.' : 'Long break paused. Resume when ready.';
+  } else {
+    return isRunning ? 'Recharge now. Your next sprint will be easier.' : 'Break paused. Resume when ready.';
+  }
+}, [currentPhase, isRunning, breakCycleCount]);
 
   const dismissHomeGuide = async () => {
     setShowHomeGuide(false);
@@ -425,15 +461,15 @@ const handlePenaltyGoBack = () => {
           onStop={handleStop}
           onPause={handlePause}
           onStartBreak={handleStartBreak}
-          onStartLongBreak={handleStartLongBreak}
+          breakCycleCount={breakCycleCount}
+          breakDuration={breakDuration}
+          longBreakDuration={longBreakDuration}
         />
 
-        {currentPhase === 'idle' && (
-          <FocusDurationCard
-            focusDuration={focusDuration}
-            setFocusDuration={setFocusDuration}
-          />
-        )}
+        {/* To-do list always available */}
+        <View style={styles.todoContainer}>
+          <ToDoList />
+        </View>
 
         {/* 🆕 Penalty Alert Modal */}
         <PenaltyAlert
@@ -450,6 +486,9 @@ const handlePenaltyGoBack = () => {
           // 🆕 ADDED: Pass stop action props
           isStopAction={pendingAction === 'stop'}
           onGoBack={pendingAction === 'stop' ? handlePenaltyGoBack : undefined}
+           // 🆕 ADDED: Stop-specific options
+          onSkipToBreak={pendingAction === 'stop' ? handleSkipToBreak : undefined}
+          breakCycleCount={breakCycleCount} // Pass to determine break type
         />
 
         <GuidancePopup
