@@ -1,24 +1,40 @@
 import { StyleSheet } from 'react-native';
+import { colors } from '../../../core/theme/colors';
 
 export default StyleSheet.create({
   container: {
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   fullWidth: { width: '100%' },
   small: { paddingVertical: 8, paddingHorizontal: 12 },
   medium: { paddingVertical: 12, paddingHorizontal: 16 },
   large: { paddingVertical: 16, paddingHorizontal: 20 },
-  primary: { backgroundColor: '#2563EB' },
-  secondary: { backgroundColor: '#F3F4F6' },
-  outline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#D1D5DB' },
+  primary: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+  },
+  secondary: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+  },
+  outline: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   text: { backgroundColor: 'transparent' },
-  danger: { backgroundColor: '#DC2626' },
+  danger: {
+    backgroundColor: colors.danger,
+    borderColor: colors.danger,
+  },
   disabled: { opacity: 0.6 },
   iconLeft: { marginRight: 8 },
   iconRight: { marginLeft: 8 },
-  contentText: { color: '#FFFFFF', fontSize: 16 },
-  contentTextSecondary: { color: '#111827' },
+  contentText: { color: colors.primaryDark, fontSize: 16, fontWeight: '700' },
+  contentTextSecondary: { color: colors.textPrimary, fontWeight: '600' },
 });

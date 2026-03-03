@@ -8,8 +8,11 @@ import {
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
+import { useSettings } from '../../../context/SettingsContext';
 import type { PenaltyType } from '../types/PenaltyTypes';
 
 interface PenaltyAlertProps {
@@ -18,7 +21,11 @@ interface PenaltyAlertProps {
   message: string;
   onConfirm: () => void;
   onCancel?: () => void;
+  isStopAction?: boolean;
   showCancel?: boolean;
+  onGoBack?: () => void;
+  onSkipToBreak?: () => void; // 🆕 ADDED
+  breakCycleCount?: number; // 🆕 ADDED
 }
 
 export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
@@ -28,8 +35,13 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
   onConfirm,
   onCancel,
   showCancel = true,
+  isStopAction = false,
+  onGoBack,
+  onSkipToBreak, // 🆕 ADDED
+  breakCycleCount = 0, // 🆕 ADDED
 }) => {
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
+  const { vibrationEnabled, soundEnabled } = useSettings();
 
   React.useEffect(() => {
     if (visible) {
@@ -39,10 +51,28 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
         tension: 40,
         useNativeDriver: true,
       }).start();
+
+      // Trigger haptics and sound on penalty alert
+      const triggerFeedback = async () => {
+        if (vibrationEnabled) {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        }
+        if (soundEnabled) {
+          try {
+            const { sound } = await Audio.Sound.createAsync(
+              require('../../../../assets/sounds/penalty.mp3')
+            );
+            await sound.playAsync();
+          } catch (error) {
+            console.error('Failed to play penalty sound:', error);
+          }
+        }
+      };
+      triggerFeedback();
     } else {
       scaleAnim.setValue(0);
     }
-  }, [visible]);
+  }, [visible, vibrationEnabled, soundEnabled]);
 
   // Get icon and color based on penalty type
   const getAlertStyle = () => {
@@ -65,6 +95,12 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
           iconColor: colors.warning || '#F39C12',
           title: 'Time Added',
         };
+      case 'lockMode':
+        return {
+          icon: 'lock-closed' as const,
+          iconColor: colors.primary,
+          title: 'Lock Mode',
+        };
       default:
         return {
           icon: 'information-circle' as const,
@@ -75,6 +111,9 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
   };
 
   const alertStyle = getAlertStyle();
+    // 🆕 Determine break type text
+  const isLongBreakTime = breakCycleCount >= 2;
+  const breakText = isLongBreakTime ? 'Long Break' : 'Break';
 
   return (
     <Modal
@@ -106,30 +145,69 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
           <Text style={styles.message}>{message}</Text>
 
           {/* Buttons */}
-          <View style={styles.buttonRow}>
-            {showCancel && onCancel && (
+          {/* 🔄 CHANGED: Different button layouts based on action type */}
+          {isStopAction && onGoBack && onSkipToBreak ? (
+            // 🆕 STOP ACTION: Show "Accept Penalty" and "Go Back" buttons
+            <View style={styles.buttonColumn}>
+              {/* Skip to Break */} 
               <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={onCancel}
+                style={[
+                  styles.button,
+                  styles.confirmButton,
+                  { backgroundColor: colors.success },
+                ]}
+                onPress={onSkipToBreak}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Ionicons name="cafe" size={20} color="#fff" />
+                <Text style={styles.confirmButtonText}>Skip to {breakText}</Text>
               </TouchableOpacity>
-            )}
-            
-            <TouchableOpacity
-              style={[
-                styles.button,
-                styles.confirmButton,
-                { backgroundColor: alertStyle.iconColor },
-                !showCancel && { flex: 1 },
-              ]}
-              onPress={onConfirm}
-            >
-              <Text style={styles.confirmButtonText}>
-                {penaltyType === 'warning' && showCancel ? 'Continue' : 'OK'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.confirmButton,
+                  { backgroundColor: alertStyle.iconColor },
+                ]}
+                onPress={onConfirm}
+              >
+                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                <Text style={styles.confirmButtonText}>Finish Session</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.goBackButton]}
+                onPress={onGoBack}
+              >
+                <Ionicons name="arrow-back" size={20} color={colors.primary} />
+                <Text style={styles.goBackButtonText}>Go Back to Timer</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            // 🔄 ORIGINAL: Pause action or warning - show Cancel/Continue buttons
+            <View style={styles.buttonRow}>
+              {showCancel && onCancel && (
+                <TouchableOpacity
+                  style={[styles.button, styles.buttonInRow,styles.cancelButton]}
+                  onPress={onCancel}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              )}
+              
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.buttonInRow,
+                  styles.confirmButton,
+                  { backgroundColor: alertStyle.iconColor },
+                  !showCancel && { width: '100%' }, // changed: use width instead of flex
+                ]}
+                onPress={onConfirm}
+              >
+                <Text style={styles.confirmButtonText}>
+                  {penaltyType === 'warning' && showCancel ? 'Continue' : penaltyType === 'lockMode' ? 'Stay in Focus' : 'OK'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </Animated.View>
       </View>
     </Modal>
@@ -184,11 +262,23 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: spacing.md,
   },
+  // 🆕 ADDED: Specific style for buttons in row layout
+  buttonInRow: {
+    flex: 1, // Only use flex in row layout
+  },
+  // 🆕 ADDED: Vertical button column (for stop action)
+  buttonColumn: {
+    flexDirection: 'column',
+    gap: spacing.md,
+    width: '100%',
+    marginTop: spacing.md,
+  },
   button: {
-    flex: 1,
+  // 🔧 FIX: Remove flex: 1 from here
     paddingVertical: spacing.md,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center', // 🆕 ADDED: Ensure content is centered
   },
   cancelButton: {
     backgroundColor: colors.surface,
@@ -201,11 +291,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   confirmButton: {
-    // Background color set dynamically
+    flexDirection: 'row', // 🆕 ADDED: For icon + text layout
+    gap: spacing.xs, // 🆕 ADDED: Space between icon and text
+    alignItems: 'center', // 🆕 ADDED
+  justifyContent: 'center', // 🆕 ADDED
   },
   confirmButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
+  },
+  // 🆕 ADDED: Go back button styling
+  goBackButton: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    justifyContent: 'center', // 🆕 ADDED: Center the content
+  },
+  goBackButtonText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -1,4 +1,4 @@
-export type PenaltyType = 'warning' | 'resetTimer' | 'addTime';
+export type PenaltyType = 'none' | 'warning' | 'resetTimer' | 'addTime' | 'lockMode';
 
 export interface Interruption {
   id: string;

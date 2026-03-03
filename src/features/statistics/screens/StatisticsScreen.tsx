@@ -1,23 +1,21 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   SafeAreaView, 
   ScrollView,
   StyleSheet, 
-  Text, 
   View,
   Dimensions,
+  Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
+import { useSettings } from '../../../context/SettingsContext';
+import { Card, GuidancePopup, Text } from '../../../shared/components';
+import { getStatisticsGuideDismissedFlag, setStatisticsGuideDismissedFlag } from '../../../services/storage';
 
-// 🎯 Sample data - Replace with real data from context/storage
-const statsCards = [
-  { label: 'Total Sessions', value: '42' },
-  { label: "Today's Focus", value: '1h 30m' },
-  { label: 'Weekly Average', value: '2h 10m' },
-];
+// 🎯 Sample data placeholders - real values fetched from context/storage below
 
 const weeklyData = [
   { day: 'Mon', hours: 2, label: '2h' },
@@ -38,6 +36,43 @@ const dailySessionsData = Array.from({ length: 30 }, (_, i) => ({
 const { width } = Dimensions.get('window');
 
 export default function StatisticsScreen() {
+  const [showStatsGuide, setShowStatsGuide] = useState(false);
+
+  const {
+    breakCycleCount,
+    longBreaksCompleted,
+    focusDuration,
+    totalSessions,
+    totalInterruptions,
+  } = useSettings();
+
+  useEffect(() => {
+    const loadStatsGuideState = async () => {
+      const isDismissed = await getStatisticsGuideDismissedFlag();
+      setShowStatsGuide(!isDismissed);
+    };
+
+    loadStatsGuideState();
+  }, []);
+
+  const dismissStatsGuide = async () => {
+    setShowStatsGuide(false);
+    await setStatisticsGuideDismissedFlag(true);
+  };
+
+  const statsGuideSteps = [
+    'If interruptions rise, tighten your penalty settings.',
+    'If sessions drop, reduce focus duration to rebuild consistency.',
+    'Aim for stable weekly focus trend, not perfect days.',
+  ];
+
+  // build stats cards dynamically
+  const statsCards = [
+    { label: 'Successful Focus Sessions', value: String(totalSessions) },
+    { label: 'Long Breaks Taken', value: String(longBreaksCompleted) },
+    { label: 'Total Interruptions', value: String(totalInterruptions) },
+  ];
+
   // Calculate max hours for bar chart scaling
   const maxHours = Math.max(...weeklyData.map((d) => d.hours), 1);
 
@@ -53,6 +88,9 @@ export default function StatisticsScreen() {
         >
           {/* 🎯 HEADER */}
           <Text style={styles.heading}>Statistics</Text>
+          <Pressable onPress={() => setShowStatsGuide(true)} style={styles.guideTrigger}>
+            <Text style={styles.guideTriggerText}>Show me how to read these stats</Text>
+          </Pressable>
 
           {/* 🎯 STATS CARDS ROW */}
           <View style={styles.statsRow}>
@@ -65,8 +103,9 @@ export default function StatisticsScreen() {
           </View>
 
           {/* 🎯 WEEKLY FOCUS TIME CHART */}
-          <View style={styles.card}>
+          <Card>
             <Text style={styles.cardTitle}>Weekly Focus Time</Text>
+            <Text style={styles.chartHint}>Goal: keep this trend stable or rising week over week.</Text>
             
             {/* Bar Chart */}
             <View style={styles.chartContainer}>
@@ -107,11 +146,12 @@ export default function StatisticsScreen() {
                 })}
               </View>
             </View>
-          </View>
+          </Card>
 
           {/* 🎯 DAILY SESSIONS LINE CHART */}
-          <View style={styles.card}>
+          <Card>
             <Text style={styles.cardTitle}>Daily Sessions</Text>
+            <Text style={styles.chartHint}>Aim for repeatable streaks, not perfect days.</Text>
             
             {/* Line Chart Container */}
             <View style={styles.lineChartContainer}>
@@ -137,9 +177,18 @@ export default function StatisticsScreen() {
                 </LinearGradient>
               </View>
             </View>
-          </View>
+          </Card>
 
         </ScrollView>
+
+        <GuidancePopup
+          visible={showStatsGuide}
+          onClose={dismissStatsGuide}
+          title="What To Do With These Statistics"
+          description="Quick coaching for better focus decisions"
+          steps={statsGuideSteps}
+          footnote="You can reopen this guide any time from this screen."
+        />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -211,6 +260,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: spacing.md,
+  },
+  guideTrigger: {
+    alignSelf: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  guideTriggerText: {
+    color: colors.primaryDark,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  chartHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
   },
 
   // 🎯 BAR CHART

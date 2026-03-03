@@ -11,7 +11,7 @@ import { RootStackParamList } from './types';
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 // Set to true to always show onboarding (useful for testing)
-const FORCE_SHOW_ONBOARDING = true;
+const FORCE_SHOW_ONBOARDING = false;
 
 export default function RootNavigator() {
 	const [isBootstrapping, setIsBootstrapping] = useState(true);

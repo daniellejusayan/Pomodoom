@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSettings } from '../../../context/SettingsContext';
 import * as Haptics from 'expo-haptics';
 import type { Interruption, PenaltyAction, PenaltyType } from '../types/PenaltyTypes';
@@ -7,6 +7,11 @@ export const usePenaltySystem = () => {
   const { penaltyType, vibrationEnabled } = useSettings();
   const [sessionPauseCount, setSessionPauseCount] = useState(0);
   const [interruptions, setInterruptions] = useState<Interruption[]>([]);
+
+  // 🔧 FIX: Log penalty type changes for debugging
+  useEffect(() => {
+    console.log('Penalty type changed to:', penaltyType);
+  }, [penaltyType]);
 
   // 🎯 Calculate time penalty based on pause count
   const calculateTimePenalty = useCallback((pauseCount: number): number => {
@@ -23,6 +28,11 @@ export const usePenaltySystem = () => {
     timeAdded?: number
   ): string => {
     switch (type) {
+      case 'none':
+        return reason === 'pause'
+          ? 'Session paused.'
+          : 'Session stopped.';
+
       case 'warning':
         return reason === 'pause' 
           ? "You're about to pause your session. Are you sure?"
@@ -32,7 +42,14 @@ export const usePenaltySystem = () => {
         return "You chose to stop your session. As a penalty, you will have to reset the timer for this session.";
       
       case 'addTime':
-        return `Session paused. As a penalty, ${timeAdded} minutes have been added to your timer.`;
+        return reason === 'pause'
+          ? `Session paused. As a penalty, ${timeAdded} minutes have been added to your timer.`
+          : `You chose to stop your session. As a penalty, ${timeAdded} minutes were added before returning to Home Timer.`;
+
+      case 'lockMode':
+        return reason === 'pause'
+          ? 'Lock Mode is active. Hard app-lock is coming soon, but this interruption is still recorded.'
+          : 'Lock Mode is active. Hard app-lock is coming soon, but stopping now still counts as an interruption.';
       
       default:
         return "Session interrupted.";
@@ -49,7 +66,7 @@ export const usePenaltySystem = () => {
       sessionId,
       timestamp: new Date(),
       reason,
-      penaltyApplied: penaltyType,
+      penaltyApplied: penaltyType, // Log the penalty type applied for this interruption
     };
     
     setInterruptions(prev => [...prev, interruption]);
@@ -63,8 +80,18 @@ export const usePenaltySystem = () => {
   // 🎯 Apply penalty and return action to take
   const applyPenalty = useCallback((
     sessionId: string,
-    reason: 'pause' | 'stop'
+    reason: 'pause' | 'stop',
+    stopCount: number = 0 // 🆕 ADDED: Track stop attempts for escalation
   ): PenaltyAction | null => {
+    // Log the penalty application for debugging
+    console.log('Applying penalty:', penaltyType, 'for reason:', reason);
+
+    if (penaltyType === 'none') {
+      const interruptionReason = reason === 'pause' ? 'manual_pause' : 'manual_stop';
+      recordInterruption(sessionId, interruptionReason);
+      return null;
+    }
+
     // Trigger haptic feedback if enabled
     if (vibrationEnabled) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -89,21 +116,32 @@ export const usePenaltySystem = () => {
         };
 
       case 'addTime':
-        if (reason === 'pause') {
-          const timeAdded = calculateTimePenalty(sessionPauseCount);
-          return {
-            type: 'addTime',
-            message: getPenaltyMessage('addTime', reason, timeAdded),
-            timeAddedMinutes: timeAdded,
-            pauseCount: sessionPauseCount + 1,
-          };
+        let timeAdded: number;
+        if (reason === 'stop') {
+          // 🆕 ESCALATION for stop action: 2 min → 5 min → 10 min → 10 min ...
+          if (stopCount === 0) {
+            timeAdded = 2;
+          } else if (stopCount === 1) {
+            timeAdded = 5;
+          } else {
+            timeAdded = 10;
+          }
         } else {
-          // Stop action with addTime penalty = reset timer
-          return {
-            type: 'resetTimer',
-            message: getPenaltyMessage('resetTimer', reason),
-          };
+          // Original pause escalation
+          timeAdded = calculateTimePenalty(sessionPauseCount);
         }
+        return {
+          type: 'addTime',
+          message: getPenaltyMessage('addTime', reason, timeAdded),
+          timeAddedMinutes: timeAdded,
+          pauseCount: reason === 'pause' ? sessionPauseCount + 1 : sessionPauseCount,
+        };
+
+      case 'lockMode':
+        return {
+          type: 'lockMode',
+          message: getPenaltyMessage('lockMode', reason),
+        };
 
       default:
         return null;

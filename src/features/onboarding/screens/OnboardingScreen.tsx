@@ -16,6 +16,7 @@ import { ROUTES } from '../../../navigation/routes';
 import { RootStackParamList } from '../../../navigation/types';
 import { spacing } from '../../../core/theme/spacing';
 import { colors } from '../../../core/theme/colors';
+import { GuidancePopup } from '../../../shared/components';
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -31,6 +32,13 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isGuideVisible, setIsGuideVisible] = useState(true);
+
+  const guideSteps = [
+    'Pick your focus duration before each sprint.',
+    'Press Start and stay with one task until the timer ends.',
+    'Take your break, then jump into your next sprint.',
+  ];
 
   // 🌊 Floating animation (like CSS @keyframes float)
   useEffect(() => {
@@ -52,7 +60,6 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
     ).start();
   }, []);
 
-  // ✨ Shine animation (button hover effect equivalent)
   const triggerShine = () => {
     shineAnim.setValue(-150);
     Animated.timing(shineAnim, {
@@ -62,7 +69,6 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
     }).start();
   };
 
-  // 🆕 ADDED: Button press animation (scale down then back up)
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
       toValue: 0.95,
@@ -70,7 +76,6 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
     }).start();
   };
 
-  // 🆕 ADDED: Button release animation
   const handlePressOut = () => {
     Animated.spring(scaleAnim, {
       toValue: 1,
@@ -135,26 +140,28 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
                       {/* Middle Section */}
           <View style={styles.middle}>
             <Text style={styles.title}>
-              Boost Your Focus,{'\n'}Crush Your Goals.
+              Stay Focused,{'\n'}or Pay the Price.
             </Text>
             <Text style={styles.subtitle}>
-              Achieve more with focused work {'\n'} sessions and refreshing breaks.{'\n'}{'\n'}
-              <Text style={{ fontWeight: 'bold' }}>Welcome to Pomodoom!</Text>
+              Pomodoom is your focus loop with accountability built in.{"\n"}
+              You work, recover, and repeat—without drifting.
             </Text>
+            <Pressable onPress={() => setIsGuideVisible(true)} style={styles.guideTrigger}>
+              <Text style={styles.guideTriggerText}>Show me how Pomodoom works</Text>
+            </Pressable>
           </View>
           </View>
 
           {/* Bottom Section */}
           <View style={styles.bottom}>
             <Pressable
-              onPressIn={handlePressIn}  // 🆕 Scale down on press
-              onPressOut={handlePressOut} // 🆕 Scale back on release
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
               onPress={() => {
                 triggerShine();
                 handleGetStarted();
               }}
             >
-              {/* 🆕 ADDED: Animated wrapper for scale transform */}
               <Animated.View
                 style={[
                   styles.ctaWrapper,
@@ -167,9 +174,8 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
                   end={{ x: 1, y: 1 }}
                   style={styles.cta}
                 >
-                  {/* 🔄 CHANGED: Show loading state if processing */}
                   <Text style={styles.ctaText}>
-                    {isLoading ? 'Loading...' : 'Get Started'}
+                    {isLoading ? 'Loading...' : 'Start My Focus Journey'}
                   </Text>
 
                   <Animated.View
@@ -184,6 +190,15 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
           </View>
 
         </Animated.View>
+
+        <GuidancePopup
+          visible={isGuideVisible}
+          onClose={() => setIsGuideVisible(false)}
+          title="Quick Focus Guide"
+          description="Three playful rules to win your focus session"
+          steps={guideSteps}
+          footnote="You can change penalty strictness anytime in Settings."
+        />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -243,6 +258,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textSecondary,
     textAlign: 'center',
+    lineHeight: 22,
+  },
+
+  guideTrigger: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+
+  guideTriggerText: {
+    color: colors.primaryDark,
+    fontWeight: '700',
+    fontSize: 13,
   },
 
   bottom: {
@@ -252,12 +284,10 @@ const styles = StyleSheet.create({
   ctaWrapper: {
     borderRadius: 999,
     overflow: 'hidden',
-    // 🆕 ADDED: Shadow for depth (iOS)
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    // 🆕 ADDED: Elevation for depth (Android)
     elevation: 5,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',

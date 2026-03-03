@@ -21,7 +21,7 @@ export const useTimer = (initialDuration = 25 * 60) => {
         state.intervalRef.current = null;
       }
     };
-  }, [state]);
+  }, []);
 
   return { ...state, ...actions, ...data } as const;
 };

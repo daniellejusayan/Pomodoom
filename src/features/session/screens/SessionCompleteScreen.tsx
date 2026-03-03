@@ -1,19 +1,69 @@
-import { useNavigation } from '@react-navigation/native';
-import React from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Image} from 'react-native';
+import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
+import React, { useEffect } from 'react';
+import { SafeAreaView, StyleSheet, View, Image} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient'; // Optional: For a nice background gradient
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
+import { useSettings } from '../../../context/SettingsContext';
 import { ROUTES } from '../../../navigation/routes';
 import type { BottomTabParamList, TimerStackParamList } from '../../../navigation/types';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Button, Card, Text } from '../../../shared/components';
 
 type Nav = NativeStackNavigationProp<TimerStackParamList, typeof ROUTES.TIMER.SESSION_COMPLETE>;
 
+type Route = RouteProp<TimerStackParamList, typeof ROUTES.TIMER.SESSION_COMPLETE>;
+
 export default function SessionCompleteScreen() {
   const navigation = useNavigation<Nav>();
+  const route = useRoute<Route>();
+  const { vibrationEnabled, soundEnabled, addSessionInterruptions, penaltyType, recordPenaltyUsage } = useSettings();
+  const recordedSessionRef = React.useRef<string | null>(null);
+
+  // read pauseCount from params
+  const { sessionId, pauseCount = 0 } = route.params ?? {};
+  const safePauseCount = Number.isFinite(pauseCount) ? Math.max(0, Math.floor(pauseCount)) : 0;
+
+  // record total interruptions once per completed session
+  useEffect(() => {
+    if (!sessionId || recordedSessionRef.current === sessionId) {
+      return;
+    }
+
+    recordedSessionRef.current = sessionId;
+    // always log which penalty was active during this session
+    recordPenaltyUsage(penaltyType);
+
+    if (safePauseCount > 0) {
+      addSessionInterruptions(safePauseCount);
+    }
+  }, [sessionId, safePauseCount, addSessionInterruptions, penaltyType, recordPenaltyUsage]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // Trigger success feedback when session complete screen appears
+      const triggerFeedback = async () => {
+        if (vibrationEnabled) {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        if (soundEnabled) {
+          try {
+            const { sound } = await Audio.Sound.createAsync(
+              require('../../../../assets/sounds/success.mp3')
+            );
+            await sound.playAsync();
+          } catch (error) {
+            console.error('Failed to play success sound:', error);
+          }
+        }
+      };
+      triggerFeedback();
+    }, [vibrationEnabled, soundEnabled])
+  );
 
   const handleBackHome = () => {
     navigation.navigate(ROUTES.TIMER.HOME);
@@ -36,7 +86,7 @@ export default function SessionCompleteScreen() {
 
         <View style={styles.content}>
           {/* 🆕 ADDED: White card container for all content */}
-          <View style={styles.card}>
+          <Card>
             
             {/* 🆕 ADDED: Celebration illustration */}
             <View style={styles.illustrationContainer}>
@@ -62,33 +112,38 @@ export default function SessionCompleteScreen() {
 
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>Interruptions:</Text>
-                <Text style={styles.statValue}>0</Text>
+                <Text style={styles.statValue}>{safePauseCount}</Text>
               </View>
 
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>Penalties:</Text>
-                <Text style={styles.statValue}>None</Text>
+                <Text style={styles.statValue}>{penaltyType}</Text>
               </View>
             </View>
-          </View>
+          </Card>
 
           {/* 🆕 ADDED: Buttons outside the white card */}
           <View style={styles.buttonsContainer}>
             {/* Primary Button - Return to Home */}
-            <TouchableOpacity 
-              style={styles.primaryButton} 
+            <Button
               onPress={handleBackHome}
+              fullWidth
+              style={styles.primaryButton}
+              textStyle={styles.primaryButtonText}
             >
-              <Text style={styles.primaryButtonText}>Return to Home</Text>
-            </TouchableOpacity>
+              Return to Home
+            </Button>
 
             {/* 🆕 ADDED: Secondary Button - View Statistics */}
-            <TouchableOpacity 
-              style={styles.secondaryButton} 
+            <Button
               onPress={handleViewStats}
+              variant="secondary"
+              fullWidth
+              style={styles.secondaryButton}
+              textStyle={styles.secondaryButtonText}
             >
-              <Text style={styles.secondaryButtonText}>View Statistics</Text>
-            </TouchableOpacity>
+              View Statistics
+            </Button>
           </View>
         </View>
       </SafeAreaView>
@@ -135,16 +190,19 @@ const styles = StyleSheet.create({
   },
 
     // 🆕 ADDED: Illustration container
+
   illustrationContainer: {
-    width: 360,
-    height: 180,
-    marginBottom: spacing.sm,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
 
   // 🆕 ADDED: Illustration image
   illustration: {
-    width: '100%',
-    height: '100%',
+    width: 250,
+    height: 250,
+    transform: [{ scale: 1.8 }],
   },
 
   title: {
