@@ -1,6 +1,6 @@
 import React from 'react';
 import { Animated, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicon } from '../../../shared/components/Icon/Icon';
 
 import { colors } from '../../../core/theme/colors';
 import { Button, ProgressRing, Text } from '../../../shared/components';
@@ -91,7 +91,7 @@ export function TimerDisplayCard({
             fullWidth
             style={styles.controlButton}
             textStyle={styles.controlButtonText}
-            icon={<Ionicons name="stop" size={22} color={colors.danger} />}
+            icon={<Ionicon name="stop" size={22} color={colors.danger} />}
           >
             Stop
           </Button>
@@ -103,7 +103,7 @@ export function TimerDisplayCard({
               fullWidth
               style={styles.controlButton}
               textStyle={styles.controlButtonText}
-              icon={<Ionicons name="pause" size={22} color={colors.primary} />}
+              icon={<Ionicon name="pause" size={22} color={colors.primary} />}
             >
               Pause
             </Button>
@@ -114,7 +114,7 @@ export function TimerDisplayCard({
               fullWidth
               style={styles.controlButton}
               textStyle={styles.controlButtonText}
-              icon={<Ionicons name="play" size={22} color={colors.primary} />}
+              icon={<Ionicon name="play" size={22} color={colors.primary} />}
             >
               Resume
             </Button>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   SafeAreaView, 
   ScrollView,
@@ -12,31 +12,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
 import { useSettings } from '../../../context/SettingsContext';
+import { useSession } from '../../../context/SessionContext';
 import { Card, GuidancePopup, Text } from '../../../shared/components';
 import { getStatisticsGuideDismissedFlag, setStatisticsGuideDismissedFlag } from '../../../services/storage';
-
-// 🎯 Sample data placeholders - real values fetched from context/storage below
-
-const weeklyData = [
-  { day: 'Mon', hours: 2, label: '2h' },
-  { day: 'Tue', hours: 1.5, label: '1.5h' },
-  { day: 'Wed', hours: 1.3, label: '1.3h' },
-  { day: 'Thu', hours: 2, label: '2h' },
-  { day: 'Fri', hours: 1, label: '1h' },
-  { day: 'Sat', hours: 1.5, label: '1.5h' },
-  { day: 'Sun', hours: 2, label: '2h' },
-];
-
-// 🎯 Mock data for daily sessions trend (last 30 days)
-const dailySessionsData = Array.from({ length: 30 }, (_, i) => ({
-  day: i + 1,
-  sessions: Math.floor(Math.random() * 3) + 2, // Random 2-5 sessions
-}));
 
 const { width } = Dimensions.get('window');
 
 export default function StatisticsScreen() {
   const [showStatsGuide, setShowStatsGuide] = useState(false);
+  const { history } = useSession();
 
   const {
     breakCycleCount,
@@ -45,6 +29,53 @@ export default function StatisticsScreen() {
     totalSessions,
     totalInterruptions,
   } = useSettings();
+
+  const sessionsByDate = useMemo(() => {
+    return history.reduce<Record<string, { sessions:number; seconds:number }>>((acc, session) => {
+      if (!session.end) return acc;
+      const dateKey = new Date(session.end).toISOString().split('T')[0];
+      const duration = session.duration ?? Math.max(0, Math.round((session.end - session.start) / 1000));
+      const entry = acc[dateKey] ?? { sessions: 0, seconds: 0 };
+      return {
+        ...acc,
+        [dateKey]: {
+          sessions: entry.sessions + 1,
+          seconds: entry.seconds + duration,
+        },
+      };
+    }, {});
+  }, [history]);
+
+  const weeklyData = useMemo(() => {
+    const today = new Date();
+    const data = [] as Array<{ day: string; hours: number; label: string }>;
+
+    for (let i = 6; i >= 0; i -= 1) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const seconds = sessionsByDate[key]?.seconds ?? 0;
+      const hours = Number((seconds / 3600).toFixed(2));
+      data.push({ day: dayLabel, hours, label: `${hours.toFixed(1)}h` });
+    }
+
+    return data;
+  }, [sessionsByDate]);
+
+  const dailySessionsData = useMemo(() => {
+    const today = new Date();
+    const data = [] as Array<{ day:number; sessions:number }>;
+
+    for (let i = 29; i >= 0; i -= 1) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      data.push({ day: Number(key.split('-')[2]), sessions: sessionsByDate[key]?.sessions ?? 0 });
+    }
+
+    return data;
+  }, [sessionsByDate]);
 
   useEffect(() => {
     const loadStatsGuideState = async () => {

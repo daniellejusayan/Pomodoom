@@ -1,8 +1,8 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
-import { Ionicons } from '@expo/vector-icons'; // For tab icons
 
+import { Ionicon } from '../shared/components/Icon/Icon';
 import SessionCompleteScreen from '../features/session/screens/SessionCompleteScreen';
 import StatisticsScreen from '../features/statistics/screens/StatisticsScreen';
 import SettingsScreen from '../features/settings/screens/SettingsScreen';
@@ -55,18 +55,17 @@ export default function BottomTabs() {
 				component={StatisticsScreen}
 				options={{ title: 'Statistics',
 					tabBarIcon: ({focused, color, size}) => (
-						<Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} 
+						<Ionicon name={focused ? 'stats-chart' : 'stats-chart-outline'} 
 						size={size} color={color} />
 					)
-				}
-				}
+				}}
 			/>
 			<Tab.Screen
 				name={ROUTES.TABS.TIMER}
 				component={TimerStackNavigator}
 				options={{ title: 'Home', 
 					tabBarIcon: ({focused, color, size}) => (
-						<Ionicons name={focused ? 'timer' : 'timer-outline'} 
+					<Ionicon name={focused ? 'timer' : 'timer-outline'} 
 						size={size} color={color} />
 					)
 				 }}
@@ -76,7 +75,7 @@ export default function BottomTabs() {
 				component={SettingsScreen}
 				options={{ title: 'Settings',
 					tabBarIcon: ({focused, color, size}) => (
-						<Ionicons name={focused ? 'settings' : 'settings-outline'} 
+					<Ionicon name={focused ? 'settings' : 'settings-outline'} 
 						size={size} color={color} />
 					)
 				 }}

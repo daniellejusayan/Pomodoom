@@ -15,6 +15,47 @@ const sanitizePenaltyType = (value: unknown): PenaltyType => {
     : 'none';
 };
 
+const 
+validateSettings = (settings: any) => {
+  const focusDuration = Number(settings?.focusDuration ?? 25);
+  const breakDuration = Number(settings?.breakDuration ?? 5);
+  const longBreakDuration = Number(settings?.longBreakDuration ?? 15);
+  const soundEnabled = typeof settings?.soundEnabled === 'boolean' ? settings.soundEnabled : true;
+  const vibrationEnabled = typeof settings?.vibrationEnabled === 'boolean' ? settings.vibrationEnabled : true;
+
+  if (!Number.isFinite(focusDuration) || focusDuration < 1 || focusDuration > 120) {
+    throw new Error('focusDuration must be between 1 and 120 minutes');
+  }
+  if (!Number.isFinite(breakDuration) || breakDuration < 1 || breakDuration > 60) {
+    throw new Error('breakDuration must be between 1 and 60 minutes');
+  }
+  if (!Number.isFinite(longBreakDuration) || longBreakDuration < 1 || longBreakDuration > 90) {
+    throw new Error('longBreakDuration must be between 1 and 90 minutes');
+  }
+
+  return {
+    focusDuration: Math.round(focusDuration),
+    breakDuration: Math.round(breakDuration),
+    longBreakDuration: Math.round(longBreakDuration),
+    penaltyType: sanitizePenaltyType(settings?.penaltyType),
+    penaltyTypeUsage: {
+      none: Number(settings?.penaltyTypeUsage?.none ?? 0),
+      warning: Number(settings?.penaltyTypeUsage?.warning ?? 0),
+      resetTimer: Number(settings?.penaltyTypeUsage?.resetTimer ?? 0),
+      addTime: Number(settings?.penaltyTypeUsage?.addTime ?? 0),
+      lockMode: Number(settings?.penaltyTypeUsage?.lockMode ?? 0),
+    },
+    soundEnabled,
+    vibrationEnabled,
+    breakCycleCount: Number(settings?.breakCycleCount ?? 0),
+    longBreaksCompleted: Number(settings?.longBreaksCompleted ?? 0),
+    totalSessions: Number(settings?.totalSessions ?? 0),
+    totalInterruptions: Number(settings?.totalInterruptions ?? 0),
+    firstUseDate: typeof settings?.firstUseDate === 'string' ? settings.firstUseDate : null,
+    dailySessions: typeof settings?.dailySessions === 'object' && settings?.dailySessions !== null ? settings.dailySessions : {},
+  };
+};
+
 interface SettingsContextType {
 
   // Duration settings
@@ -94,30 +135,25 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       if (stored) {
         const settings = JSON.parse(stored);
-        setFocusDurationState(settings.focusDuration ?? 25);
-        setBreakDurationState(settings.breakDuration ?? 5);
-        setLongBreakDurationState(settings.longBreakDuration ?? 15);
-        setPenaltyTypeState(sanitizePenaltyType(settings.penaltyType));
-        setPenaltyTypeUsage(settings.penaltyTypeUsage ?? {
-          warning: 0,
-          resetTimer: 0,
-          addTime: 0,
-        });
-        setSoundEnabledState(settings.soundEnabled ?? true);
-        setVibrationEnabledState(settings.vibrationEnabled ?? true);
-        setBreakCycleCount(settings.breakCycleCount ?? 0);
-        setLongBreaksCompleted(settings.longBreaksCompleted ?? 0);
-        setTotalSessions(settings.totalSessions ?? 0);
-        setTotalInterruptions(
-          Number.isFinite(settings.totalInterruptions)
-            ? Math.max(0, Math.floor(settings.totalInterruptions))
-            : 0
-        );
-        setFirstUseDate(settings.firstUseDate ?? null);
-        setDailySessions(settings.dailySessions ?? {});
+        const normalized = validateSettings(settings);
+
+        setFocusDurationState(normalized.focusDuration);
+        setBreakDurationState(normalized.breakDuration);
+        setLongBreakDurationState(normalized.longBreakDuration);
+        setPenaltyTypeState(normalized.penaltyType);
+        setPenaltyTypeUsage(normalized.penaltyTypeUsage);
+        setSoundEnabledState(normalized.soundEnabled);
+        setVibrationEnabledState(normalized.vibrationEnabled);
+        setBreakCycleCount(normalized.breakCycleCount);
+        setLongBreaksCompleted(normalized.longBreaksCompleted);
+        setTotalSessions(normalized.totalSessions);
+        setTotalInterruptions(normalized.totalInterruptions);
+        setFirstUseDate(normalized.firstUseDate);
+        setDailySessions(normalized.dailySessions);
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
+      // fallback to defaults, no crash
     } finally {
       setLoading(false);
     }
@@ -132,9 +168,15 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setFocusDuration = async (duration: number) => {
-    setFocusDurationState(duration);
+    const value = Number(duration);
+    if (!Number.isFinite(value) || value < 1 || value > 120) {
+      console.error('Invalid focus duration value:', duration);
+      return;
+    }
+    const rounded = Math.round(value);
+    setFocusDurationState(rounded);
     await saveSettings({
-      focusDuration: duration,
+      focusDuration: rounded,
       breakDuration,
       longBreakDuration,
       penaltyType,
@@ -150,10 +192,16 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setBreakDuration = async (duration: number) => {
-    setBreakDurationState(duration);
+    const value = Number(duration);
+    if (!Number.isFinite(value) || value < 1 || value > 60) {
+      console.error('Invalid break duration value:', duration);
+      return;
+    }
+    const rounded = Math.round(value);
+    setBreakDurationState(rounded);
     await saveSettings({
       focusDuration,
-      breakDuration: duration,
+      breakDuration: rounded,
       longBreakDuration,
       penaltyType,
       soundEnabled,
@@ -168,11 +216,17 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setLongBreakDuration = async (duration: number) => {
-    setLongBreakDurationState(duration);
+    const value = Number(duration);
+    if (!Number.isFinite(value) || value < 1 || value > 90) {
+      console.error('Invalid long break duration value:', duration);
+      return;
+    }
+    const rounded = Math.round(value);
+    setLongBreakDurationState(rounded);
     await saveSettings({
       focusDuration,
       breakDuration,
-      longBreakDuration: duration,
+      longBreakDuration: rounded,
       penaltyType,
       soundEnabled,
       vibrationEnabled,
@@ -186,12 +240,13 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setPenaltyType = async (type: PenaltyType) => {
-    setPenaltyTypeState(type);
+    const normalized = sanitizePenaltyType(type);
+    setPenaltyTypeState(normalized);
     await saveSettings({
       focusDuration,
       breakDuration,
       longBreakDuration,
-      penaltyType: type,
+      penaltyType: normalized,
       penaltyTypeUsage,
       soundEnabled,
       vibrationEnabled,
