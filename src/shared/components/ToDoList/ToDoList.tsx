@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicon } from '../Icon/Icon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ToDoItem, ToDoListProps } from './ToDoList.types';
@@ -52,9 +52,25 @@ export const ToDoList: React.FC<ToDoListProps> = ({ style }) => {
     setShowAddModal(true);
   };
 
+  const validateTodoText = (value: string) => {
+    if (!value) {
+      Alert.alert('Validation', 'Task text cannot be empty.');
+      return false;
+    }
+    if (value.length > 200) {
+      Alert.alert('Validation', 'Task text must be 200 characters or less.');
+      return false;
+    }
+    if (/\p{C}/u.test(value)) {
+      Alert.alert('Validation', 'Task text contains unsupported control characters.');
+      return false;
+    }
+    return true;
+  };
+
   const handleAdd = () => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!validateTodoText(trimmed)) return;
     
     const newItem: ToDoItem = { 
       id: Date.now().toString() + Math.floor(Math.random() * 1000), 
@@ -113,7 +129,7 @@ export const ToDoList: React.FC<ToDoListProps> = ({ style }) => {
         style={styles.checkbox} 
         onPress={() => toggleItem(item.id)}
       >
-        <Ionicons 
+        <Ionicon 
           name={item.completed ? 'checkbox' : 'square-outline'} 
           size={24} 
           color={item.completed ? colors.primary : colors.textSecondary} 
@@ -137,7 +153,7 @@ export const ToDoList: React.FC<ToDoListProps> = ({ style }) => {
         onPress={() => removeItem(item.id)}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Ionicons 
+        <Ionicon 
           name="trash-outline" 
           size={20} 
           color={colors.danger || '#E74C3C'} 
@@ -148,7 +164,7 @@ export const ToDoList: React.FC<ToDoListProps> = ({ style }) => {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="checkmark-circle-outline" size={48} color={colors.textSecondary} />
+      <Ionicon name="checkmark-circle-outline" size={48} color={colors.textSecondary} />
       <Text style={styles.emptyText}>No tasks yet</Text>
       <Text style={styles.emptySubtext}>Tap + to add your first task</Text>
     </View>
@@ -158,11 +174,11 @@ export const ToDoList: React.FC<ToDoListProps> = ({ style }) => {
     <View style={[styles.container, style]}> 
       {/* Header */}
       <View style={styles.header}>
-        <Ionicons name="list-outline" size={20} color={colors.primary} />
+        <Ionicon name="list-outline" size={20} color={colors.primary} />
         <Text style={styles.headerTitle}>Tasks</Text>
         <View style={styles.spacer} />
         <TouchableOpacity style={styles.addButton} onPress={handleOpenAddModal}>
-          <Ionicons name="add" size={24} color="#fff" />
+          <Ionicon name="add" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -191,7 +207,7 @@ export const ToDoList: React.FC<ToDoListProps> = ({ style }) => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add New Task</Text>
               <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
+<Ionicon name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 

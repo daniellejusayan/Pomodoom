@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicon } from '../../../shared/components/Icon/Icon';
 
 import { focusDurationsMinutes } from '../../../core/constants';
 import { colors } from '../../../core/theme/colors';
@@ -16,7 +16,7 @@ export function FocusDurationCard({ focusDuration, setFocusDuration }: FocusDura
   return (
     <Card>
       <View style={styles.cardHeader}>
-        <Ionicons name="timer-outline" size={20} color={colors.primary} />
+        <Ionicon name="timer-outline" size={20} color={colors.primary} />
         <Text style={styles.sectionTitle}>Focus Duration</Text>
       </View>
       <Text style={styles.sectionDescription}>Choose how long to stay locked in for this session.</Text>

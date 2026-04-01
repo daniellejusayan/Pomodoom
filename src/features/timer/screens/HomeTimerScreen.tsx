@@ -16,7 +16,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { usePenaltySystem } from '../../penalties/hooks/usePenaltySystem';
 import { PenaltyAlert } from '../../penalties/components/PenaltyAlert';
 import type { PenaltyAction } from '../../penalties/types/PenaltyTypes';
-import { AppState, AppStateStatus } from 'react-native';
+import { useAppStateHandler } from '../hooks/useAppStateHandler';
 import { useSettings } from '../../../context/SettingsContext';
 import { playAlarm, triggerVibration } from '../../../core/utils/alerts';
 import { getHomeTutorialDismissedFlag, setHomeTutorialDismissedFlag } from '../../../services/storage';
@@ -114,10 +114,22 @@ export default function HomeTimerScreen() {
   }, [focusDuration, currentPhase, reset]);
 
     // 🆕 Monitor app state for background detection
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    return () => subscription.remove();
-  }, [isRunning, currentPhase]);
+  useAppStateHandler(
+    () => {
+      if (isRunning && currentPhase === 'focus') {
+        const penalty = applyPenalty(sessionIdRef.current, 'pause');
+        if (penalty) {
+          if (penalty.type === 'addTime' && penalty.timeAddedMinutes) {
+            const additionalSeconds = penalty.timeAddedMinutes * 60;
+            set(secondsLeft + additionalSeconds);
+          }
+          pause();
+        }
+      }
+    },
+    undefined,
+    [isRunning, currentPhase, secondsLeft, applyPenalty, pause]
+  );
 
   // 🧪 DEBUG: Log penalty type changes
   useEffect(() => {
@@ -129,28 +141,6 @@ export default function HomeTimerScreen() {
     console.log('Context penalty:', currentPenaltyType);
     console.log('Hook penalty:', hookPenaltyType);
   }, [currentPenaltyType, hookPenaltyType]);
-
-  const handleAppStateChange = (nextAppState: AppStateStatus) => {
-    // If timer is running and app goes to background
-    if (
-      isRunning &&
-      currentPhase === 'focus' &&
-      nextAppState === 'background'
-    ) {
-      // Trigger penalty for going to background
-      const penalty = applyPenalty(sessionIdRef.current, 'pause');
-      if (penalty) {
-        if (penalty.type === 'addTime' && penalty.timeAddedMinutes) {
-          // Add time immediately for background interruption
-          const additionalSeconds = penalty.timeAddedMinutes * 60;
-          set(secondsLeft + additionalSeconds);
-        }
-        // Pause the timer
-        pause();
-      }
-    }
-  };
-
 
   // 🎯 TIMER CONTROLS
   const handleStart = () => {
@@ -405,7 +395,7 @@ const handlePenaltyGoBack = () => {
     const secs = focusDuration * 60;
     reset(secs);
     pause();
-  } else if (type === 'addTime' && added) {start
+  } else if (type === 'addTime' && added) {
     // Add penalty time then resume
     const additionalSeconds = added * 60;
     set(secondsLeft + additionalSeconds);

@@ -7,8 +7,9 @@ import {
   View,
   Animated,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicon } from '../../../shared/components/Icon/Icon';
 import * as Haptics from 'expo-haptics';
+// TODO: migrate from expo-av to expo-audio/expo-video in SDK 54+
 import { Audio } from 'expo-av';
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
@@ -131,7 +132,7 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
         >
           {/* Icon */}
           <View style={[styles.iconContainer, { backgroundColor: `${alertStyle.iconColor}20` }]}>
-            <Ionicons
+            <Ionicon
               name={alertStyle.icon}
               size={48}
               color={alertStyle.iconColor}
@@ -158,7 +159,7 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
                 ]}
                 onPress={onSkipToBreak}
               >
-                <Ionicons name="cafe" size={20} color="#fff" />
+                <Ionicon name="cafe" size={20} color="#fff" />
                 <Text style={styles.confirmButtonText}>Skip to {breakText}</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -169,14 +170,14 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
                 ]}
                 onPress={onConfirm}
               >
-                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                <Ionicon name="checkmark-circle" size={20} color="#fff" />
                 <Text style={styles.confirmButtonText}>Finish Session</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.goBackButton]}
                 onPress={onGoBack}
               >
-                <Ionicons name="arrow-back" size={20} color={colors.primary} />
+                <Ionicon name="arrow-back" size={20} color={colors.primary} />
                 <Text style={styles.goBackButtonText}>Go Back to Timer</Text>
               </TouchableOpacity>
             </View>
