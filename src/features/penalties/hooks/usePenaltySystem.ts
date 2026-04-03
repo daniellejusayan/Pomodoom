@@ -48,8 +48,8 @@ export const usePenaltySystem = () => {
 
       case 'lockMode':
         return reason === 'pause'
-          ? 'Lock Mode is active. Hard app-lock is coming soon, but this interruption is still recorded.'
-          : 'Lock Mode is active. Hard app-lock is coming soon, but stopping now still counts as an interruption.';
+          ? 'Lock Mode is active. Pause and Stop are blocked during focus.'
+          : 'Lock Mode is active. Stop is blocked unless you complete an emergency exit challenge.';
       
       default:
         return "Session interrupted.";

@@ -26,13 +26,35 @@ const fallbackGlyph: Record<string, string> = {
   'arrow-back': '←',
   'list-outline': '☑️',
   'checkmark-circle': '✔️',
+  checkbox: '☑️',
+  'square-outline': '☐',
+  'trash-outline': '🗑️',
+  'reorder-two-outline': '⠿',
+  bookmark: '🔖',
+  'bookmark-outline': '🔖',
+  'chevron-forward': '›',
+  checkmark: '✓',
+  'chevron-up-outline': '˄',
+  'chevron-down-outline': '˅',
+  star: '★',
+  'star-outline': '☆',
+  'moon': '🌙',
+  'moon-outline': '🌙',
+  alert: '⚠️',
+  'alert-circle': '⚠️',
+  warning: '❗',
+  'refresh-circle': '🔄',
+  time: '⏱️',
+  'lock-closed': '🔒',
+  'information-circle': 'ℹ️',
 };
 
 export const Ionicon = ({ name, size = 24, color = '#000', style }: IconProps) => {
   if (Platform.OS === 'web') {
     const glyph = fallbackGlyph[name] || '•';
+    const webSize = Math.max(size, 14);
     return (
-      <Text style={[{ fontSize: size, color, textAlign: 'center' }, style]}>
+      <Text style={[{ fontSize: webSize, color, textAlign: 'center', lineHeight: webSize }, style]}>
         {glyph}
       </Text>
     );

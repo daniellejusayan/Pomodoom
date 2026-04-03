@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   StyleSheet,
@@ -27,6 +27,8 @@ interface PenaltyAlertProps {
   onGoBack?: () => void;
   onSkipToBreak?: () => void; // 🆕 ADDED
   breakCycleCount?: number; // 🆕 ADDED
+  nextBreakCycleCount?: number; // 🆕 ADDED
+  currentPhase?: 'idle' | 'focus' | 'break' | 'longBreak'; // 🆕 ADDED
 }
 
 export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
@@ -40,11 +42,14 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
   onGoBack,
   onSkipToBreak, // 🆕 ADDED
   breakCycleCount = 0, // 🆕 ADDED
+  nextBreakCycleCount, // 🆕 ADDED
+  currentPhase = 'idle', // 🆕 ADDED
 }) => {
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
+  const [countdown, setCountdown] = useState<number>(0);
   const { vibrationEnabled, soundEnabled } = useSettings();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (visible) {
       Animated.spring(scaleAnim, {
         toValue: 1,
@@ -73,7 +78,32 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
     } else {
       scaleAnim.setValue(0);
     }
-  }, [visible, vibrationEnabled, soundEnabled]);
+  }, [visible, vibrationEnabled, soundEnabled, scaleAnim]);
+
+  useEffect(() => {
+    if (!visible) {
+      setCountdown(0);
+      return;
+    }
+
+    if (penaltyType !== 'lockMode') {
+      setCountdown(0);
+      return;
+    }
+
+    setCountdown(10);
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [visible, penaltyType]);
 
   // Get icon and color based on penalty type
   const getAlertStyle = () => {
@@ -113,8 +143,17 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
 
   const alertStyle = getAlertStyle();
     // 🆕 Determine break type text
-  const isLongBreakTime = breakCycleCount >= 2;
+  const isLongBreakTime = breakCycleCount >= 4;
+  const isNextLongBreakTime = (nextBreakCycleCount ?? breakCycleCount) >= 4;
   const breakText = isLongBreakTime ? 'Long Break' : 'Break';
+  // 🆕 Determine skip button label and icon based on phase
+  const isInBreakPhase = currentPhase === 'break' || currentPhase === 'longBreak';
+  const skipButtonLabel = isInBreakPhase ? 'Skip to Focus' : `Skip to ${isNextLongBreakTime ? 'Long Break' : 'Break'}`;
+  const skipButtonIcon = isInBreakPhase
+    ? 'play'
+    : isNextLongBreakTime
+    ? 'moon'
+    : 'cafe';
 
   return (
     <Modal
@@ -147,10 +186,10 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
 
           {/* Buttons */}
           {/* 🔄 CHANGED: Different button layouts based on action type */}
-          {isStopAction && onGoBack && onSkipToBreak ? (
+          {isStopAction && onGoBack ? (
             // 🆕 STOP ACTION: Show "Accept Penalty" and "Go Back" buttons
             <View style={styles.buttonColumn}>
-              {/* Skip to Break */} 
+              {/* Skip to Break or Focus */} 
               <TouchableOpacity
                 style={[
                   styles.button,
@@ -159,19 +198,22 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
                 ]}
                 onPress={onSkipToBreak}
               >
-                <Ionicon name="cafe" size={20} color="#fff" />
-                <Text style={styles.confirmButtonText}>Skip to {breakText}</Text>
+                <Ionicon name={skipButtonIcon} size={20} color="#fff" />
+                <Text style={styles.confirmButtonText}>{skipButtonLabel}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.button,
                   styles.confirmButton,
-                  { backgroundColor: alertStyle.iconColor },
+                  { backgroundColor: countdown > 0 ? colors.border : alertStyle.iconColor },
                 ]}
-                onPress={onConfirm}
+                onPress={countdown > 0 ? undefined : onConfirm}
+                disabled={countdown > 0}
               >
                 <Ionicon name="checkmark-circle" size={20} color="#fff" />
-                <Text style={styles.confirmButtonText}>Finish Session</Text>
+                <Text style={styles.confirmButtonText}>
+                  {countdown > 0 ? `Wait ${countdown}s...` : 'Finish Session'}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.goBackButton]}
@@ -198,13 +240,20 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
                   styles.button,
                   styles.buttonInRow,
                   styles.confirmButton,
-                  { backgroundColor: alertStyle.iconColor },
+                  { backgroundColor: countdown > 0 ? colors.border : alertStyle.iconColor },
                   !showCancel && { width: '100%' }, // changed: use width instead of flex
                 ]}
-                onPress={onConfirm}
+                onPress={countdown > 0 ? undefined : onConfirm}
+                disabled={countdown > 0}
               >
                 <Text style={styles.confirmButtonText}>
-                  {penaltyType === 'warning' && showCancel ? 'Continue' : penaltyType === 'lockMode' ? 'Stay in Focus' : 'OK'}
+                  {countdown > 0
+                    ? `Wait ${countdown}s...`
+                    : penaltyType === 'warning' && showCancel
+                    ? 'Continue'
+                    : penaltyType === 'lockMode'
+                    ? 'Stay in Focus'
+                    : 'OK'}
                 </Text>
               </TouchableOpacity>
             </View>
