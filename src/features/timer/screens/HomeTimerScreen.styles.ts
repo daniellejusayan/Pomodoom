@@ -156,9 +156,4 @@ export const styles = StyleSheet.create({
   coachSecondaryAction: {
     flex: 1,
   },
-  todoContainer: {
-    width: '100%',
-    marginTop: spacing.md,
-     marginBottom: spacing.xl, // 🔧 ADDED: Extra bottom margin
-  },
 });

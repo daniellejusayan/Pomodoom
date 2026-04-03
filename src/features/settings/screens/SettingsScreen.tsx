@@ -134,7 +134,7 @@ export default function SettingsScreen() {
               {penaltyType === 'warning' && 'Friendly accountability: confirm before pausing or stopping.'}
               {penaltyType === 'resetTimer' && 'Hard reset: interruptions can send your timer back to start.'}
               {penaltyType === 'addTime' && 'Most popular: interruptions add real minutes to your session.'}
-              {penaltyType === 'lockMode' && 'Premium preview: strict accountability now, true app lock coming soon.'}
+              {penaltyType === 'lockMode' && 'Strict lock: Pause/Stop are blocked in focus, app switching triggers a cooldown, and emergency exit requires a math challenge.'}
             </Text>
             <View style={styles.chipsContainer}>
               <Chip label="None" selected={penaltyType === 'none'} onPress={() => setPenaltyType('none')} />

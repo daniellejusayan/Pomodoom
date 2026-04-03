@@ -1,10 +1,10 @@
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import {
   SafeAreaView,
   Animated,
-  View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { colors } from '../../../core/theme/colors';
@@ -15,6 +15,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 // Add these imports at the top
 import { usePenaltySystem } from '../../penalties/hooks/usePenaltySystem';
 import { PenaltyAlert } from '../../penalties/components/PenaltyAlert';
+import { LockViolationAlert } from '../../penalties/components/LockViolationAlert';
+import { EmergencyExitAlert } from '../../penalties/components/EmergencyExitAlert';
 import type { PenaltyAction } from '../../penalties/types/PenaltyTypes';
 import { useAppStateHandler } from '../hooks/useAppStateHandler';
 import { useSettings } from '../../../context/SettingsContext';
@@ -23,7 +25,10 @@ import { getHomeTutorialDismissedFlag, setHomeTutorialDismissedFlag } from '../.
 import { GuidancePopup } from '../../../shared/components';
 import { useTimer } from '../../../shared/hooks/useTimer';
 import { TimerDisplayCard } from '../components/TimerDisplayCard';
-import { ToDoList } from '../../../shared/components/ToDoList';
+import { TimerCompleteAlert } from '../components/TimerCompleteAlert';
+import { ToDoListBottomSheet } from '../../../shared/components/ToDoList/ToDoListBottomSheet';
+import { ToDoListButton } from '../../../shared/components/ToDoList/ToDoListButton';
+import type { ToDoItem } from '../../../shared/components/ToDoList/ToDoList.types';
 import { TimerHeader } from '../components/TimerHeader';
 import { styles } from './HomeTimerScreen.styles';
 
@@ -82,7 +87,16 @@ export default function HomeTimerScreen() {
   const [pendingAction, setPendingAction] = useState<'pause' | 'stop' | null>(null);
   const [sessionStopCount, setSessionStopCount] = useState(0); // 🆕 Track stop attempts in current session
   const [showHomeGuide, setShowHomeGuide] = useState(false);
+  const [completeAlert, setCompleteAlert] = useState<'focus' | 'break' | 'longBreak' | null>(null); // 🆕 Timer completion modal state
+  const [showTodoSheet, setShowTodoSheet] = useState(false);
+  const [activeTask, setActiveTask] = useState<string | null>(null);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [lockTapCount, setLockTapCount] = useState(0);
+  const [showEmergencyExit, setShowEmergencyExit] = useState(false);
+  const [showLockViolationAlert, setShowLockViolationAlert] = useState(false);
   const sessionIdRef = useRef<string>(Date.now().toString());
+  const activeTaskIdRef = useRef<string | null>(null);
+  const isLocked = currentPhase === 'focus' && currentPenaltyType === 'lockMode';
 
   const homeGuideSteps = [
     'Choose your focus duration before starting.',
@@ -113,22 +127,108 @@ export default function HomeTimerScreen() {
     }
   }, [focusDuration, currentPhase, reset]);
 
-    // 🆕 Monitor app state for background detection
-  useAppStateHandler(
-    () => {
-      if (isRunning && currentPhase === 'focus') {
-        const penalty = applyPenalty(sessionIdRef.current, 'pause');
-        if (penalty) {
-          if (penalty.type === 'addTime' && penalty.timeAddedMinutes) {
-            const additionalSeconds = penalty.timeAddedMinutes * 60;
-            set(secondsLeft + additionalSeconds);
-          }
-          pause();
-        }
+  useEffect(() => {
+    if (!isLocked) {
+      setLockTapCount(0);
+      setShowEmergencyExit(false);
+      setShowLockViolationAlert(false);
+    }
+  }, [isLocked]);
+
+  useEffect(() => {
+    activeTaskIdRef.current = activeTaskId;
+  }, [activeTaskId]);
+
+  const refreshActiveTask = useCallback(async () => {
+    try {
+      const stored = await AsyncStorage.getItem('@pomodoom_todos');
+
+      if (!stored) {
+        setActiveTask(null);
+        setActiveTaskId(null);
+        return;
       }
-    },
+
+      const todos = JSON.parse(stored) as ToDoItem[];
+      const preferredTaskId = activeTaskIdRef.current;
+      const preferredTask = preferredTaskId ? todos.find((todo) => todo.id === preferredTaskId) : null;
+      const fallbackTask = todos.find((todo) => !todo.completed) ?? null;
+      const nextTask = preferredTask ?? fallbackTask;
+
+      setActiveTaskId(nextTask?.id ?? null);
+      setActiveTask(nextTask?.text ?? null);
+    } catch (error) {
+      console.error('Failed to load active task:', error);
+      setActiveTask(null);
+      setActiveTaskId(null);
+    }
+  }, []);
+
+  const handleSelectTask = useCallback((item: ToDoItem) => {
+    setActiveTaskId(item.id);
+    setActiveTask(item.text);
+  }, []);
+
+  const handleLockedControlTap = useCallback(() => {
+    if (!isLocked) return;
+
+    setLockTapCount((prev) => {
+      const next = prev + 1;
+      if (next >= 3) {
+        setShowEmergencyExit(true);
+        return 0;
+      }
+      return next;
+    });
+  }, [isLocked]);
+
+  useEffect(() => {
+    refreshActiveTask();
+  }, [refreshActiveTask]);
+
+  useEffect(() => {
+    if (!showTodoSheet) {
+      refreshActiveTask();
+    }
+  }, [showTodoSheet, refreshActiveTask]);
+
+    // Refs to keep callbacks fresh without re-registering the listener
+  const isRunningRef = useRef(isRunning);
+  const currentPhaseRef = useRef(currentPhase);
+  const secondsLeftRef = useRef(secondsLeft);
+
+  useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
+  useEffect(() => { currentPhaseRef.current = currentPhase; }, [currentPhase]);
+  useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
+
+  // 🆕 Monitor app state for background detection
+  useAppStateHandler(
+    useCallback(() => {
+      if (!isRunningRef.current || currentPhaseRef.current !== 'focus') return;
+
+      if (currentPenaltyType === 'lockMode') {
+        pause();
+        setShowLockViolationAlert(true);
+        return;
+      }
+
+      const penalty = applyPenalty(sessionIdRef.current, 'pause');
+
+      if (penalty) {
+        if (penalty.type === 'addTime' && penalty.timeAddedMinutes) {
+          const additionalSeconds = penalty.timeAddedMinutes * 60;
+          set(secondsLeftRef.current + additionalSeconds);
+        }
+        setPenaltyAlert(penalty);
+        setPendingAction('pause');
+        pause();
+      } else {
+        // penaltyType === 'none': just pause silently
+        pause();
+      }
+    }, [applyPenalty, currentPenaltyType, pause, set]),
     undefined,
-    [isRunning, currentPhase, secondsLeft, applyPenalty, pause]
+    []
   );
 
   // 🧪 DEBUG: Log penalty type changes
@@ -152,7 +252,9 @@ export default function HomeTimerScreen() {
 //   });
 //   return; // Exit early, skipping all the timer logic below
 //   // ⚠️ END OF TEMPORARY CODE
-  
+    if (vibrationEnabled) {
+      triggerVibration();
+      } 
       if (currentPhase === 'idle') {
       // Create new session ID
       sessionIdRef.current = Date.now().toString();
@@ -163,6 +265,9 @@ export default function HomeTimerScreen() {
       reset(secs);
       circleOpacity.setValue(1);
       setSessionStopCount(0); // 🆕 Reset stop count on new session
+      setLockTapCount(0);
+      setShowEmergencyExit(false);
+      setShowLockViolationAlert(false);
       start();
     } else {
       // Resume paused timer
@@ -172,6 +277,21 @@ export default function HomeTimerScreen() {
 
 // 🔄 MODIFIED: handlePause with penalty
   const handlePause = () => {
+    if (isLocked) {
+      handleLockedControlTap();
+      return;
+    }
+
+    if (vibrationEnabled) {
+      triggerVibration();
+    }
+
+    // No penalties during break phases
+    if (currentPhase === 'break' || currentPhase === 'longBreak') {
+      pause();
+      return;
+    }
+
     setPendingAction('pause');
     const penalty = applyPenalty(sessionIdRef.current, 'pause');
     
@@ -185,6 +305,22 @@ export default function HomeTimerScreen() {
 
 // 🔄 MODIFIED: handleStop with penalty
   const handleStop = () => {
+    if (isLocked) {
+      handleLockedControlTap();
+      return;
+    }
+
+    if (vibrationEnabled) {
+      triggerVibration();
+    }
+
+    // No penalties during break phases — just show stop options directly
+    if (currentPhase === 'break' || currentPhase === 'longBreak') {
+      setPendingAction('stop');
+      showStopOptions();
+      return;
+    }
+
     setPendingAction('stop');
     const penalty = applyPenalty(sessionIdRef.current, 'stop', sessionStopCount);
     
@@ -198,13 +334,13 @@ export default function HomeTimerScreen() {
 
   // 🆕 Show options when stopping: Skip to Break, Finish Session, Return to Timer
 const showStopOptions = () => {
-  // This will be handled by the PenaltyAlert component with custom buttons
-  const isLongBreakTime = breakCycleCount >= 2;
-  const breakType = isLongBreakTime ? 'long break' : 'break';
-  
+  const message = currentPhase === 'break' || currentPhase === 'longBreak'
+    ? `You're stopping your break. What would you like to do?`
+    : `You're stopping your focus session. What would you like to do?`;
+
   setPenaltyAlert({
-    type: 'warning', // Use warning type to show custom buttons
-    message: `You're stopping your focus session. What would you like to do?`,
+    type: 'warning',
+    message,
   });
 };
 
@@ -230,7 +366,7 @@ const showStopOptions = () => {
     sessionIdRef.current = Date.now().toString();
   };
 
-// 🔄 MODIFIED: handleTimerComplete - reset penalties on successful completion, play sound & vibration
+// 🔄 MODIFIED: handleTimerComplete - show confirmation modal instead of auto-navigating
   const handleTimerComplete = async () => {
     pause();
     
@@ -251,25 +387,42 @@ const showStopOptions = () => {
     }, 1000);
     
     if (currentPhase === 'focus') {
-      // Reset penalties on successful completion
-      resetSessionPenalties();
-      // count session
-      incrementSessions();
-      
-      navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, {
-        sessionId: sessionIdRef.current,
-        pauseCount: sessionPauseCount,
-      });
-      setCurrentPhase('idle');
-      reset(focusDuration * 60);
-      
-      // Generate new session ID for next session
-      sessionIdRef.current = Date.now().toString();
+      // 🆕 Show confirmation modal; transition/counter updates happen after user confirms
+      setCompleteAlert('focus');
     } else if (currentPhase === 'break') {
+      // 🆕 Show confirmation modal for break completion
+      setCompleteAlert('break');
+    } else if (currentPhase === 'longBreak') {
+      setCompleteAlert('longBreak');
+    }
+  };
+
+  // 🆕 Handle confirmation modal start button
+  const handleCompleteAlertStart = (completedPhase: 'focus' | 'break' | 'longBreak') => {
+    setCompleteAlert(null);
+    circleOpacity.setValue(1);
+
+    if (completedPhase === 'focus') {
+      resetSessionPenalties();
+      incrementSessions();
+
+      const nextCount = breakCycleCount + 1;
       incrementBreakCycle();
+      sessionIdRef.current = Date.now().toString();
+
+      if (nextCount >= 4) {
+        resetBreakCycle();
+        setCurrentPhase('longBreak');
+        reset(longBreakDuration * 60);
+      } else {
+        setCurrentPhase('break');
+        reset(breakDuration * 60);
+      }
+      // user starts manually — no start() call
+    } else if (completedPhase === 'break') {
       setCurrentPhase('idle');
       reset(focusDuration * 60);
-    } else if (currentPhase === 'longBreak') {
+    } else if (completedPhase === 'longBreak') {
       incrementLongBreaks();
       resetBreakCycle();
       setCurrentPhase('idle');
@@ -293,46 +446,37 @@ const showStopOptions = () => {
   const handlePenaltyConfirm = () => {
     if (!penaltyAlert) return;
 
+    // "Finish Session" button in stop action layout — always navigates to session complete
+    if (pendingAction === 'stop') {
+      finishSession();
+      setPenaltyAlert(null);
+      setPendingAction(null);
+      return;
+    }
+
+    // Pause action penalties
     switch (penaltyAlert.type) {
       case 'warning':
-        // User confirmed they want to pause/stop
-        if (pendingAction === 'pause') {
-          pause();
-        } else if (pendingAction === 'stop') {
-          finishSession();
-        }
+        pause();
         break;
 
-      case 'resetTimer':
-        if (pendingAction === 'stop') {
-          finishSession();
-        } else {
-          // Reset timer to original duration
-          const secs = focusDuration * 60;
-          reset(secs);
-          pause();
-        }
+      case 'resetTimer': {
+        const secs = focusDuration * 60;
+        reset(secs);
+        pause();
         break;
+      }
 
       case 'addTime':
-        if (pendingAction === 'stop') {
-          finishSession();
-        } else {
-          // Add penalty time
-          if (penaltyAlert.timeAddedMinutes) {
-            const additionalSeconds = penaltyAlert.timeAddedMinutes * 60;
-            set(secondsLeft + additionalSeconds);
-          }
-          pause();
+        if (penaltyAlert.timeAddedMinutes) {
+          const additionalSeconds = penaltyAlert.timeAddedMinutes * 60;
+          set(secondsLeft + additionalSeconds);
         }
+        pause();
         break;
 
       case 'lockMode':
-        if (pendingAction === 'pause') {
-          pause();
-        } else if (pendingAction === 'stop') {
-          finishSession();
-        }
+        pause();
         break;
     }
 
@@ -347,22 +491,39 @@ const showStopOptions = () => {
     // Don't pause/stop - user cancelled
   };
 
-  // 🆕 Handle "Skip to Break" option
+  // 🆕 Handle "Skip to Break" or "Skip to Focus" option
   const handleSkipToBreak = () => {
     setPenaltyAlert(null);
     setPendingAction(null);
+
+    // Break → Focus: auto-start focus immediately
+    if (currentPhase === 'break' || currentPhase === 'longBreak') {
+      setLockTapCount(0);
+      setCurrentPhase('focus');
+      reset(focusDuration * 60);
+      circleOpacity.setValue(1);
+      start();
+      return;
+    }
     
-    // Determine if it's time for long break
-    const isLongBreakTime = breakCycleCount >= 2;
-    
-    if (isLongBreakTime) {
-      handleStartLongBreak();
+    // Focus → Break: count this session, route to correct break, auto-start
+    const nextCount = breakCycleCount + 1;
+    incrementBreakCycle();
+
+    if (nextCount >= 4) {
+      resetBreakCycle();
+      setLockTapCount(0);
+      setCurrentPhase('longBreak');
+      reset(longBreakDuration * 60);
+      circleOpacity.setValue(1);
+      start();
     } else {
       handleStartBreak();
     }
   };
 
   const handleStartBreak = () => {
+    setLockTapCount(0);
     setCurrentPhase('break');
     const secs = breakDuration * 60;
     reset(secs);
@@ -371,6 +532,7 @@ const showStopOptions = () => {
   };
 
   const handleStartLongBreak = () => {
+    setLockTapCount(0);
     setCurrentPhase('longBreak');
     const secs = longBreakDuration * 60;
     reset(secs);
@@ -406,6 +568,31 @@ const handlePenaltyGoBack = () => {
   }
 };
 
+  const handleStayFocused = () => {
+    setShowEmergencyExit(false);
+    setLockTapCount(0);
+  };
+
+  const handleEmergencyExit = () => {
+    setShowEmergencyExit(false);
+    setShowLockViolationAlert(false);
+    setLockTapCount(0);
+
+    pause();
+    setCurrentPhase('idle');
+    reset(focusDuration * 60);
+    circleOpacity.setValue(1);
+    resetSessionPenalties();
+    setSessionStopCount(0);
+    sessionIdRef.current = Date.now().toString();
+  };
+
+  const handleResumeFromLockViolation = () => {
+    setShowLockViolationAlert(false);
+    setLockTapCount(0);
+    start();
+  };
+
   // 🎯 COMPUTED VALUES
   const displayTime = currentPhase === 'idle' 
     ? focusDuration 
@@ -414,7 +601,7 @@ const handlePenaltyGoBack = () => {
 // 🔄 MODIFIED: Update timer message to remove duration text
 const timerMessage = useMemo(() => {
   if (currentPhase === 'idle') {
-    const isLongBreakTime = breakCycleCount >= 2;
+    const isLongBreakTime = breakCycleCount >= 4;
     return isLongBreakTime 
       ? 'Ready for a long break?' 
       : 'Ready to focus?';
@@ -454,12 +641,41 @@ const timerMessage = useMemo(() => {
           breakCycleCount={breakCycleCount}
           breakDuration={breakDuration}
           longBreakDuration={longBreakDuration}
+          activeTask={activeTask}
+          onTaskBannerPress={() => setShowTodoSheet(true)}
+          isLocked={isLocked}
+          onLockedTap={handleLockedControlTap}
+          lockTapCount={lockTapCount}
+          penaltyType={currentPenaltyType}
         />
 
-        {/* To-do list always available */}
-        <View style={styles.todoContainer}>
-          <ToDoList />
-        </View>
+        {/* To-do list button & bottom sheet */}
+        <ToDoListButton onPress={() => setShowTodoSheet(true)} />
+
+        <ToDoListBottomSheet
+          visible={showTodoSheet}
+          onClose={() => setShowTodoSheet(false)}
+          onSelectTask={handleSelectTask}
+          selectedTaskId={activeTaskId}
+        />
+
+        {/* 🆕 Timer Completion Modal */}
+        {completeAlert && (
+          <TimerCompleteAlert
+            visible={completeAlert !== null}
+            phase={completeAlert}
+            nextLabel={
+              completeAlert === 'focus'
+                ? (breakCycleCount + 1) >= 4
+                  ? 'Start Long Break'
+                  : 'Start Break'
+                : 'Start Focus'
+            }
+            onStart={() => {
+              handleCompleteAlertStart(completeAlert);
+            }}
+          />
+        )}
 
         {/* 🆕 Penalty Alert Modal */}
         <PenaltyAlert
@@ -479,6 +695,20 @@ const timerMessage = useMemo(() => {
            // 🆕 ADDED: Stop-specific options
           onSkipToBreak={pendingAction === 'stop' ? handleSkipToBreak : undefined}
           breakCycleCount={breakCycleCount} // Pass to determine break type
+          nextBreakCycleCount={breakCycleCount + 1}
+          currentPhase={currentPhase} // 🆕 ADDED: Pass phase for contextual skip button
+        />
+
+        <LockViolationAlert
+          visible={showLockViolationAlert}
+          countdownSeconds={10}
+          onResume={handleResumeFromLockViolation}
+        />
+
+        <EmergencyExitAlert
+          visible={showEmergencyExit}
+          onStayFocused={handleStayFocused}
+          onEmergencyExit={handleEmergencyExit}
         />
 
         <GuidancePopup

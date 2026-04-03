@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import AppNavigator from './navigation';
 import { SettingsProvider } from './context/SettingsContext';
@@ -11,17 +12,22 @@ import './services/firebase';
 export default function App() {
   // Use system defaults on web; avoid hard-blocking for font load failures.
   return (
-    <ErrorBoundary>
-      <SessionProvider>
-        <SettingsProvider>
-          <AppNavigator />
-        </SettingsProvider>
-      </SessionProvider>
-    </ErrorBoundary>
+    <GestureHandlerRootView style={styles.root}>
+      <ErrorBoundary>
+        <SessionProvider>
+          <SettingsProvider>
+            <AppNavigator />
+          </SettingsProvider>
+        </SessionProvider>
+      </ErrorBoundary>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   // kept styles in case we want fallback text in the future
   loadingContainer: {
     flex: 1,

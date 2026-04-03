@@ -37,7 +37,9 @@ export default function OnboardingScreen({ navigation, onComplete }: Props) {
   const guideSteps = [
     'Pick your focus duration before each sprint.',
     'Press Start and stay with one task until the timer ends.',
-    'Take your break, then jump into your next sprint.',
+    'If you pause, stop, or background the app, a penalty can kick in based on your Settings.',
+    'Warning asks you to confirm, Add Time makes interruptions cost minutes, Reset Timer starts over, and Lock Mode is the strictest option.',
+    'You can change your penalty type anytime in Settings and replay this guide whenever you need it.',
   ];
 
   // 🌊 Floating animation (like CSS @keyframes float)

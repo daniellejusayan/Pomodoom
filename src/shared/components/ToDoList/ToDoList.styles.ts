@@ -47,7 +47,10 @@ export const styles = StyleSheet.create({
   // 🎯 TASK LIST
   list: {
     maxHeight: 300,
-    paddingBottom: spacing.md, // 🔧 ADDED: Breathing space at bottom
+    paddingBottom: spacing.md,
+  },
+  listContent: {
+    paddingBottom: spacing.sm,
   },
   itemRow: {
     flexDirection: 'row',
@@ -57,7 +60,68 @@ export const styles = StyleSheet.create({
     gap: spacing.sm,
     borderRadius: 8,
     backgroundColor: colors.surface,
-    marginBottom: spacing.xs,
+  },
+  itemRowAlt: {
+    backgroundColor: 'rgba(0,0,0,0.035)',
+  },
+  itemRowActive: {
+    backgroundColor: 'rgba(107,180,232,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(107,180,232,0.28)',
+  },
+  itemRowDragging: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  separator: {
+    height: 1,
+    marginHorizontal: spacing.xs,
+    backgroundColor: colors.border,
+    opacity: 0.7,
+  },
+  dragHandle: {
+    padding: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webReorderButtons: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    paddingHorizontal: 2,
+  },
+  activeAccentBar: {
+    width: 3,
+    alignSelf: 'stretch',
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+  },
+  textColumn: {
+    flex: 1,
+    gap: 2,
+  },
+  activeTaskMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    overflow: 'hidden',
+  },
+  activeTaskLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    color: colors.primary,
+  },
+  itemTextActive: {
+    color: colors.textPrimary,
+    fontWeight: '700',
   },
   checkbox: {
     padding: spacing.xs,
@@ -72,6 +136,17 @@ export const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
     color: colors.textSecondary,
     opacity: 0.6,
+  },
+  selectButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectButtonActive: {
+    backgroundColor: 'rgba(107,180,232,0.1)',
+    borderRadius: 14,
   },
   deleteButton: {
     padding: spacing.xs,

@@ -6,4 +6,6 @@ export interface ToDoItem {
 
 export interface ToDoListProps {
   style?: object;
+  onSelectTask?: (item: ToDoItem) => void;
+  selectedTaskId?: string | null;
 }
