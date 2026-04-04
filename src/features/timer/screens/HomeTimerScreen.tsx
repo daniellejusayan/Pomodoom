@@ -346,15 +346,16 @@ const showStopOptions = () => {
 
   // 🆕 Finish current focus session (presence of penalty handled separately)
   const finishSession = () => {
-    // increment session count for stats
-    incrementSessions();
-    // record penalty type usage in case user never visits the complete screen
-    recordPenaltyUsage(currentPenaltyType);
-    // navigate to summary
-    navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, {
-      sessionId: sessionIdRef.current,
-      pauseCount: sessionPauseCount,
-    });
+    // Only count as a completed session if stopping from focus.
+    if (currentPhase === 'focus') {
+      incrementSessions();
+      recordPenaltyUsage(currentPenaltyType);
+      navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, {
+        sessionId: sessionIdRef.current,
+        pauseCount: sessionPauseCount,
+      });
+    }
+
     // then reset internal state similar to executeStop
     pause();
     setCurrentPhase('idle');

@@ -48,6 +48,7 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
   const [countdown, setCountdown] = useState<number>(0);
   const { vibrationEnabled, soundEnabled } = useSettings();
+  const isInBreakPhase = currentPhase === 'break' || currentPhase === 'longBreak';
 
   useEffect(() => {
     if (visible) {
@@ -58,8 +59,11 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
         useNativeDriver: true,
       }).start();
 
-      // Trigger haptics and sound on penalty alert
+      // No penalty feedback during break stop actions.
+      const isBreakStopAction = isStopAction && isInBreakPhase;
+
       const triggerFeedback = async () => {
+        if (isBreakStopAction) return;
         if (vibrationEnabled) {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         }
@@ -78,7 +82,7 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
     } else {
       scaleAnim.setValue(0);
     }
-  }, [visible, vibrationEnabled, soundEnabled, scaleAnim]);
+  }, [visible, vibrationEnabled, soundEnabled, scaleAnim, isStopAction, isInBreakPhase]);
 
   useEffect(() => {
     if (!visible) {
@@ -111,8 +115,10 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
       case 'warning':
         return {
           icon: 'alert-circle' as const,
-          iconColor: colors.warning || '#F39C12',
-          title: 'Warning',
+          iconColor: isStopAction && isInBreakPhase
+            ? colors.primary
+            : colors.warning || '#F39C12',
+          title: isStopAction && isInBreakPhase ? 'Stop Break' : 'Warning',
         };
       case 'resetTimer':
         return {
@@ -145,9 +151,7 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
     // 🆕 Determine break type text
   const isLongBreakTime = breakCycleCount >= 4;
   const isNextLongBreakTime = (nextBreakCycleCount ?? breakCycleCount) >= 4;
-  const breakText = isLongBreakTime ? 'Long Break' : 'Break';
   // 🆕 Determine skip button label and icon based on phase
-  const isInBreakPhase = currentPhase === 'break' || currentPhase === 'longBreak';
   const skipButtonLabel = isInBreakPhase ? 'Skip to Focus' : `Skip to ${isNextLongBreakTime ? 'Long Break' : 'Break'}`;
   const skipButtonIcon = isInBreakPhase
     ? 'play'
