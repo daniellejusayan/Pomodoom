@@ -3,6 +3,7 @@ import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicon } from '../../../shared/components/Icon/Icon';
 
 import { colors } from '../../../core/theme/colors';
+import { formatPenaltyLabel } from '../../../core/utils/formatters';
 import { Button, ProgressRing, Text } from '../../../shared/components';
 
 type TimerPhase = 'idle' | 'focus' | 'break' | 'longBreak';
@@ -68,10 +69,10 @@ const PHASE_CONFIG = {
 
 // 🆕 ADDED: Penalty badge config for all penalty types
 const PENALTY_BADGE = {
-  'warning': { label: '⚠️ WARNING', color: '#F39C12', background: 'rgba(243,156,18,0.12)' },
-  'resetTimer': { label: '🔄 RESET', color: '#E74C3C', background: 'rgba(231,76,60,0.12)' },
-  'addTime': { label: '⏱️ +TIME', color: '#F39C12', background: 'rgba(243,156,18,0.12)' },
-  'lockMode': { label: '🔒 LOCKED', color: colors.primary, background: 'rgba(107,180,232,0.12)' },
+  warning: { label: formatPenaltyLabel('warning'), color: '#F39C12', background: 'rgba(243,156,18,0.12)' },
+  resetTimer: { label: formatPenaltyLabel('resetTimer'), color: '#E74C3C', background: 'rgba(231,76,60,0.12)' },
+  addTime: { label: formatPenaltyLabel('addTime'), color: '#F39C12', background: 'rgba(243,156,18,0.12)' },
+  lockMode: { label: formatPenaltyLabel('lockMode'), color: colors.primary, background: 'rgba(107,180,232,0.12)' },
 } satisfies Record<'warning' | 'resetTimer' | 'addTime' | 'lockMode', {
   label: string;
   color: string;

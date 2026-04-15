@@ -29,7 +29,12 @@ const Button = ({
     disabled && styles.disabled,
   ];
 
-  const baseTextStyle = variant === 'secondary' || variant === 'outline' ? styles.contentTextSecondary : styles.contentText;
+  const baseTextStyle =
+    variant === 'danger'
+      ? styles.contentTextDanger
+      : variant === 'secondary' || variant === 'outline' || variant === 'text'
+        ? styles.contentTextSecondary
+        : styles.contentText;
 
   return (
     <Pressable

@@ -36,5 +36,6 @@ export default StyleSheet.create({
   iconLeft: { marginRight: 8 },
   iconRight: { marginLeft: 8 },
   contentText: { color: colors.primaryDark, fontSize: 16, fontWeight: '700' },
+  contentTextDanger: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   contentTextSecondary: { color: colors.textPrimary, fontWeight: '600' },
 });

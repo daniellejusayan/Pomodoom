@@ -1,5 +1,6 @@
 import React from 'react';
 import { 
+  Alert,
   SafeAreaView, 
   ScrollView,
   StyleSheet, 
@@ -17,9 +18,10 @@ import {
 } from '../../../core/constants';
 
 import { useSettings } from '../../../context/SettingsContext';
-import { Card, Chip, Switch as AppSwitch, Text } from '../../../shared/components';
+import { useSession } from '../../../context/SessionContext';
+import { Button, Card, Chip, Switch as AppSwitch, Text } from '../../../shared/components';
 import { ROUTES } from '../../../navigation/routes';
-import { setHomeTutorialDismissedFlag, setOnboardingFlag } from '../../../services/storage';
+import { clearAllAppData, setHomeTutorialDismissedFlag, setOnboardingFlag } from '../../../services/storage';
 
 export default function SettingsScreen() {
   const navigation = useNavigation<any>();
@@ -38,7 +40,9 @@ export default function SettingsScreen() {
     setPenaltyType,
     setSoundEnabled,
     setVibrationEnabled,
+    resetAllSettingsData,
   } = useSettings();
+  const { clearSessionData } = useSession();
 
   const replayOnboarding = async () => {
     await setOnboardingFlag(false);
@@ -51,6 +55,37 @@ export default function SettingsScreen() {
       screen: ROUTES.TIMER.HOME,
       params: { replayTutorial: true },
     });
+  };
+
+  const runClearAllData = async () => {
+    try {
+      await clearAllAppData();
+      await resetAllSettingsData();
+      await clearSessionData();
+
+      Alert.alert('Done', 'All local app data has been cleared. Onboarding will start again.', [
+        {
+          text: 'OK',
+          onPress: () => {
+            navigation.getParent()?.navigate(ROUTES.ROOT.ONBOARDING);
+          },
+        },
+      ]);
+    } catch (error) {
+      Alert.alert('Clear Data Failed', 'We could not clear your data. Please try again.');
+      console.error('Failed to clear app data:', error);
+    }
+  };
+
+  const confirmClearAllData = () => {
+    Alert.alert(
+      'Clear All Data?',
+      'This will remove all local sessions, settings, tasks, and tutorial progress. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear Data', style: 'destructive', onPress: runClearAllData },
+      ]
+    );
   };
 
   return (
@@ -153,6 +188,16 @@ export default function SettingsScreen() {
               <Chip label="Replay Onboarding" selected={false} onPress={replayOnboarding} />
               <Chip label="Replay Home Tutorial" selected={false} onPress={replayHomeTutorial} />
             </View>
+          </Card>
+
+          <Card>
+            <Text style={styles.cardTitle}>Data Controls</Text>
+            <Text style={styles.cardDescription}>
+              Reset Pomodoom to a fresh start by clearing local sessions, tasks, settings, and tutorial state.
+            </Text>
+            <Button variant="danger" onPress={confirmClearAllData} fullWidth>
+              Clear All Data
+            </Button>
           </Card>
 
           {/* 🎯 SOUND & VIBRATION CARD */}
