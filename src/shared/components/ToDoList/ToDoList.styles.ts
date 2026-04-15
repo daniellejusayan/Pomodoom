@@ -46,7 +46,7 @@ export const styles = StyleSheet.create({
 
   // 🎯 TASK LIST
   list: {
-    maxHeight: 300,
+    maxHeight: '94%',
     paddingBottom: spacing.md,
   },
   listContent: {
@@ -253,7 +253,11 @@ export const styles = StyleSheet.create({
   },
   modalAddButtonDisabled: {
     backgroundColor: colors.border,
+    shadowColor: 'transparent',
     shadowOpacity: 0,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 0,
+    elevation: 0,
   },
   modalAddText: {
     color: '#fff',

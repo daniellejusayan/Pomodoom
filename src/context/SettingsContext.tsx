@@ -95,8 +95,64 @@ interface SettingsContextType {
   incrementSessions: () => Promise<void>;
   incrementDailySessions: () => Promise<void>;
   addSessionInterruptions: (count: number) => Promise<void>;
+  resetAllSettingsData: () => Promise<void>;
   loading: boolean;
 }
+
+const DEFAULT_SETTINGS_STATE = {
+  focusDuration: 25,
+  breakDuration: 5,
+  longBreakDuration: 15,
+  penaltyType: 'none' as PenaltyType,
+  penaltyTypeUsage: {
+    none: 0,
+    warning: 0,
+    resetTimer: 0,
+    addTime: 0,
+    lockMode: 0,
+  } as Record<PenaltyType, number>,
+  soundEnabled: true,
+  vibrationEnabled: true,
+  breakCycleCount: 0,
+  longBreaksCompleted: 0,
+  totalSessions: 0,
+  totalInterruptions: 0,
+  firstUseDate: null as string | null,
+  dailySessions: {} as { [date: string]: number },
+};
+
+const applySettingsState = (
+  state: typeof DEFAULT_SETTINGS_STATE,
+  actions: {
+    setFocusDurationState: React.Dispatch<React.SetStateAction<number>>;
+    setBreakDurationState: React.Dispatch<React.SetStateAction<number>>;
+    setLongBreakDurationState: React.Dispatch<React.SetStateAction<number>>;
+    setPenaltyTypeState: React.Dispatch<React.SetStateAction<PenaltyType>>;
+    setPenaltyTypeUsage: React.Dispatch<React.SetStateAction<Record<PenaltyType, number>>>;
+    setSoundEnabledState: React.Dispatch<React.SetStateAction<boolean>>;
+    setVibrationEnabledState: React.Dispatch<React.SetStateAction<boolean>>;
+    setBreakCycleCount: React.Dispatch<React.SetStateAction<number>>;
+    setLongBreaksCompleted: React.Dispatch<React.SetStateAction<number>>;
+    setTotalSessions: React.Dispatch<React.SetStateAction<number>>;
+    setTotalInterruptions: React.Dispatch<React.SetStateAction<number>>;
+    setFirstUseDate: React.Dispatch<React.SetStateAction<string | null>>;
+    setDailySessions: React.Dispatch<React.SetStateAction<{ [date: string]: number }>>;
+  }
+) => {
+  actions.setFocusDurationState(state.focusDuration);
+  actions.setBreakDurationState(state.breakDuration);
+  actions.setLongBreakDurationState(state.longBreakDuration);
+  actions.setPenaltyTypeState(state.penaltyType);
+  actions.setPenaltyTypeUsage(state.penaltyTypeUsage);
+  actions.setSoundEnabledState(state.soundEnabled);
+  actions.setVibrationEnabledState(state.vibrationEnabled);
+  actions.setBreakCycleCount(state.breakCycleCount);
+  actions.setLongBreaksCompleted(state.longBreaksCompleted);
+  actions.setTotalSessions(state.totalSessions);
+  actions.setTotalInterruptions(state.totalInterruptions);
+  actions.setFirstUseDate(state.firstUseDate);
+  actions.setDailySessions(state.dailySessions);
+};
 
 
 
@@ -150,6 +206,22 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         setTotalInterruptions(normalized.totalInterruptions);
         setFirstUseDate(normalized.firstUseDate);
         setDailySessions(normalized.dailySessions);
+      } else {
+        applySettingsState(DEFAULT_SETTINGS_STATE, {
+          setFocusDurationState,
+          setBreakDurationState,
+          setLongBreakDurationState,
+          setPenaltyTypeState,
+          setPenaltyTypeUsage,
+          setSoundEnabledState,
+          setVibrationEnabledState,
+          setBreakCycleCount,
+          setLongBreaksCompleted,
+          setTotalSessions,
+          setTotalInterruptions,
+          setFirstUseDate,
+          setDailySessions,
+        });
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -464,6 +536,30 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const resetAllSettingsData = async () => {
+    applySettingsState(DEFAULT_SETTINGS_STATE, {
+      setFocusDurationState,
+      setBreakDurationState,
+      setLongBreakDurationState,
+      setPenaltyTypeState,
+      setPenaltyTypeUsage,
+      setSoundEnabledState,
+      setVibrationEnabledState,
+      setBreakCycleCount,
+      setLongBreaksCompleted,
+      setTotalSessions,
+      setTotalInterruptions,
+      setFirstUseDate,
+      setDailySessions,
+    });
+
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEY);
+    } catch (error) {
+      console.error('Failed to clear settings:', error);
+    }
+  };
+
   return (
     <SettingsContext.Provider
       value={{
@@ -493,6 +589,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         incrementSessions,
         incrementDailySessions,
         addSessionInterruptions,
+        resetAllSettingsData,
         loading,
       }}
     >

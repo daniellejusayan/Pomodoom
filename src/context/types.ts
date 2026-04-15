@@ -23,6 +23,7 @@ export interface SessionContextType {
   startSession: (payload?: Partial<Session>) => void;
   completeSession: (notes?: string) => void;
   addSession: (session: Session) => void;
+  clearSessionData: () => Promise<void>;
 }
 
 export interface SettingsContextType {

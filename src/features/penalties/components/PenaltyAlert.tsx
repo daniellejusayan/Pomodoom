@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { Audio } from 'expo-av';
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
+import { formatPenaltyLabel } from '../../../core/utils/formatters';
 import { useSettings } from '../../../context/SettingsContext';
 import type { PenaltyType } from '../types/PenaltyTypes';
 
@@ -124,19 +125,19 @@ export const PenaltyAlert: React.FC<PenaltyAlertProps> = ({
         return {
           icon: 'refresh-circle' as const,
           iconColor: colors.danger || '#E74C3C',
-          title: 'Timer Reset',
+          title: formatPenaltyLabel('resetTimer'),
         };
       case 'addTime':
         return {
           icon: 'time' as const,
           iconColor: colors.warning || '#F39C12',
-          title: 'Time Added',
+          title: formatPenaltyLabel('addTime'),
         };
       case 'lockMode':
         return {
           icon: 'lock-closed' as const,
           iconColor: colors.primary,
-          title: 'Lock Mode',
+          title: formatPenaltyLabel('lockMode'),
         };
       default:
         return {

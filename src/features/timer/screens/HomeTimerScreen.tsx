@@ -20,6 +20,7 @@ import { EmergencyExitAlert } from '../../penalties/components/EmergencyExitAler
 import type { PenaltyAction } from '../../penalties/types/PenaltyTypes';
 import { useAppStateHandler } from '../hooks/useAppStateHandler';
 import { useSettings } from '../../../context/SettingsContext';
+import { useSession } from '../../../context/SessionContext';
 import { playAlarm, triggerVibration } from '../../../core/utils/alerts';
 import { getHomeTutorialDismissedFlag, setHomeTutorialDismissedFlag } from '../../../services/storage';
 import { GuidancePopup } from '../../../shared/components';
@@ -79,9 +80,11 @@ export default function HomeTimerScreen() {
     resetBreakCycle,
     incrementLongBreaks,
     incrementSessions,
+    incrementDailySessions,
     soundEnabled,
     vibrationEnabled,
   } = useSettings();
+  const { addSession } = useSession();
 
   const [penaltyAlert, setPenaltyAlert] = useState<PenaltyAction | null>(null);
   const [pendingAction, setPendingAction] = useState<'pause' | 'stop' | null>(null);
@@ -96,6 +99,9 @@ export default function HomeTimerScreen() {
   const [showLockViolationAlert, setShowLockViolationAlert] = useState(false);
   const sessionIdRef = useRef<string>(Date.now().toString());
   const activeTaskIdRef = useRef<string | null>(null);
+  const focusSessionStartRef = useRef<number | null>(null);
+  const focusRunStartRef = useRef<number | null>(null);
+  const focusedSecondsRef = useRef(0);
   const isLocked = currentPhase === 'focus' && currentPenaltyType === 'lockMode';
 
   const homeGuideSteps = [
@@ -201,6 +207,54 @@ export default function HomeTimerScreen() {
   useEffect(() => { currentPhaseRef.current = currentPhase; }, [currentPhase]);
   useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
 
+  const flushFocusedSeconds = useCallback(() => {
+    if (focusRunStartRef.current === null) {
+      return focusedSecondsRef.current;
+    }
+
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - focusRunStartRef.current) / 1000));
+    focusedSecondsRef.current += elapsedSeconds;
+    focusRunStartRef.current = null;
+    return focusedSecondsRef.current;
+  }, []);
+
+  const resetFocusedSessionTracking = useCallback(() => {
+    focusSessionStartRef.current = null;
+    focusRunStartRef.current = null;
+    focusedSecondsRef.current = 0;
+  }, []);
+
+  const finalizeFocusedSession = useCallback(async () => {
+    const totalFocusedSeconds = Math.max(0, flushFocusedSeconds());
+
+    if (totalFocusedSeconds > 0) {
+      const end = Date.now();
+      const start = focusSessionStartRef.current ?? Math.max(0, end - totalFocusedSeconds * 1000);
+      addSession({
+        id: sessionIdRef.current,
+        start,
+        end,
+        duration: totalFocusedSeconds,
+      });
+    }
+
+    await incrementSessions();
+    await incrementDailySessions();
+
+    return totalFocusedSeconds;
+  }, [addSession, flushFocusedSeconds, incrementDailySessions, incrementSessions]);
+
+  useEffect(() => {
+    if (currentPhase === 'focus' && isRunning) {
+      if (focusRunStartRef.current === null) {
+        focusRunStartRef.current = Date.now();
+      }
+      return;
+    }
+
+    flushFocusedSeconds();
+  }, [currentPhase, isRunning, flushFocusedSeconds]);
+
   // 🆕 Monitor app state for background detection
   useAppStateHandler(
     useCallback(() => {
@@ -258,6 +312,9 @@ export default function HomeTimerScreen() {
       if (currentPhase === 'idle') {
       // Create new session ID
       sessionIdRef.current = Date.now().toString();
+      focusSessionStartRef.current = Date.now();
+      focusedSecondsRef.current = 0;
+      focusRunStartRef.current = null;
       
       // Start new focus session
       setCurrentPhase('focus');
@@ -345,14 +402,16 @@ const showStopOptions = () => {
 };
 
   // 🆕 Finish current focus session (presence of penalty handled separately)
-  const finishSession = () => {
+  const finishSession = async () => {
     // Only count as a completed session if stopping from focus.
     if (currentPhase === 'focus') {
-      incrementSessions();
+      const focusedDurationSeconds = await finalizeFocusedSession();
       recordPenaltyUsage(currentPenaltyType);
       navigation.navigate(ROUTES.TIMER.SESSION_COMPLETE, {
         sessionId: sessionIdRef.current,
         pauseCount: sessionPauseCount,
+        focusedDurationSeconds,
+        completedAt: Date.now(),
       });
     }
 
@@ -363,6 +422,7 @@ const showStopOptions = () => {
     circleOpacity.setValue(1);
     resetSessionPenalties();
     setSessionStopCount(0);
+    resetFocusedSessionTracking();
     // new session id prepared for next session
     sessionIdRef.current = Date.now().toString();
   };
@@ -399,13 +459,13 @@ const showStopOptions = () => {
   };
 
   // 🆕 Handle confirmation modal start button
-  const handleCompleteAlertStart = (completedPhase: 'focus' | 'break' | 'longBreak') => {
+  const handleCompleteAlertStart = async (completedPhase: 'focus' | 'break' | 'longBreak') => {
     setCompleteAlert(null);
     circleOpacity.setValue(1);
 
     if (completedPhase === 'focus') {
       resetSessionPenalties();
-      incrementSessions();
+      await finalizeFocusedSession();
 
       const nextCount = breakCycleCount + 1;
       incrementBreakCycle();
@@ -419,6 +479,7 @@ const showStopOptions = () => {
         setCurrentPhase('break');
         reset(breakDuration * 60);
       }
+      resetFocusedSessionTracking();
       // user starts manually — no start() call
     } else if (completedPhase === 'break') {
       setCurrentPhase('idle');
@@ -499,6 +560,10 @@ const showStopOptions = () => {
 
     // Break → Focus: auto-start focus immediately
     if (currentPhase === 'break' || currentPhase === 'longBreak') {
+      sessionIdRef.current = Date.now().toString();
+      focusSessionStartRef.current = Date.now();
+      focusedSecondsRef.current = 0;
+      focusRunStartRef.current = null;
       setLockTapCount(0);
       setCurrentPhase('focus');
       reset(focusDuration * 60);
@@ -508,6 +573,7 @@ const showStopOptions = () => {
     }
     
     // Focus → Break: count this session, route to correct break, auto-start
+    resetFocusedSessionTracking();
     const nextCount = breakCycleCount + 1;
     incrementBreakCycle();
 
@@ -585,6 +651,7 @@ const handlePenaltyGoBack = () => {
     circleOpacity.setValue(1);
     resetSessionPenalties();
     setSessionStopCount(0);
+    resetFocusedSessionTracking();
     sessionIdRef.current = Date.now().toString();
   };
 
@@ -596,7 +663,7 @@ const handlePenaltyGoBack = () => {
 
   // 🎯 COMPUTED VALUES
   const displayTime = currentPhase === 'idle' 
-    ? focusDuration 
+    ? `${focusDuration}:00`
     : formatted;
 
 // 🔄 MODIFIED: Update timer message to remove duration text

@@ -3,6 +3,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const ONBOARDING_STORAGE_KEY = 'pomodoom_onboarding_completed';
 const HOME_TUTORIAL_DISMISSED_STORAGE_KEY = 'pomodoom_home_tutorial_dismissed';
 const STATISTICS_GUIDE_DISMISSED_STORAGE_KEY = 'pomodoom_statistics_guide_dismissed';
+const SETTINGS_STORAGE_KEY = '@pomodoom_settings';
+const SESSION_STORAGE_KEY = '@pomodoom_sessions';
+const TODO_STORAGE_KEY = '@pomodoom_todos';
+
+const APP_STORAGE_KEYS = [
+	ONBOARDING_STORAGE_KEY,
+	HOME_TUTORIAL_DISMISSED_STORAGE_KEY,
+	STATISTICS_GUIDE_DISMISSED_STORAGE_KEY,
+	SETTINGS_STORAGE_KEY,
+	SESSION_STORAGE_KEY,
+	TODO_STORAGE_KEY,
+];
 
 /**
  * Read onboarding completion flag.
@@ -115,4 +127,24 @@ export const resetStatisticsGuideDismissedFlag = async (): Promise<void> => {
 	}
 };
 
-export { ONBOARDING_STORAGE_KEY, HOME_TUTORIAL_DISMISSED_STORAGE_KEY, STATISTICS_GUIDE_DISMISSED_STORAGE_KEY };
+/**
+ * Clear all known Pomodoom local data keys.
+ */
+export const clearAllAppData = async (): Promise<void> => {
+	try {
+		await AsyncStorage.multiRemove(APP_STORAGE_KEYS);
+	} catch (error) {
+		console.error('Error clearing app data', error);
+		throw error;
+	}
+};
+
+export {
+	ONBOARDING_STORAGE_KEY,
+	HOME_TUTORIAL_DISMISSED_STORAGE_KEY,
+	STATISTICS_GUIDE_DISMISSED_STORAGE_KEY,
+	SETTINGS_STORAGE_KEY,
+	SESSION_STORAGE_KEY,
+	TODO_STORAGE_KEY,
+	APP_STORAGE_KEYS,
+};

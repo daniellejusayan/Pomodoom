@@ -75,9 +75,19 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     persist(nextHistory);
   };
 
+  const clearSessionData = async () => {
+    try {
+      setActiveSession(null);
+      setHistory([]);
+      await AsyncStorage.removeItem(STORAGE_KEY);
+    } catch (error) {
+      console.error('Failed to clear session history:', error);
+    }
+  };
+
   return (
     <SessionContext.Provider
-      value={{ activeSession, history, startSession, completeSession, addSession }}>
+      value={{ activeSession, history, startSession, completeSession, addSession, clearSessionData }}>
       {loading ? null : children}
     </SessionContext.Provider>
   );

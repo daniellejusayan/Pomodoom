@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { 
   SafeAreaView, 
   ScrollView,
@@ -11,6 +12,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
+import {
+  formatDurationAdaptive,
+  getAdaptiveDurationUnit,
+  toAdaptiveDurationValue,
+} from '../../../core/utils/formatters';
 import { useSettings } from '../../../context/SettingsContext';
 import { useSession } from '../../../context/SessionContext';
 import { Card, GuidancePopup, Text } from '../../../shared/components';
@@ -20,12 +26,11 @@ const { width } = Dimensions.get('window');
 
 export default function StatisticsScreen() {
   const [showStatsGuide, setShowStatsGuide] = useState(false);
+  const [lastStatsRefreshAt, setLastStatsRefreshAt] = useState(Date.now());
   const { history } = useSession();
 
   const {
-    breakCycleCount,
     longBreaksCompleted,
-    focusDuration,
     totalSessions,
     totalInterruptions,
   } = useSettings();
@@ -48,7 +53,7 @@ export default function StatisticsScreen() {
 
   const weeklyData = useMemo(() => {
     const today = new Date();
-    const data = [] as Array<{ day: string; hours: number; label: string }>;
+    const data = [] as Array<{ day: string; seconds: number; label: string }>;
 
     for (let i = 6; i >= 0; i -= 1) {
       const d = new Date(today);
@@ -56,22 +61,22 @@ export default function StatisticsScreen() {
       const key = d.toISOString().split('T')[0];
       const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
       const seconds = sessionsByDate[key]?.seconds ?? 0;
-      const hours = Number((seconds / 3600).toFixed(2));
-      data.push({ day: dayLabel, hours, label: `${hours.toFixed(1)}h` });
+      data.push({ day: dayLabel, seconds, label: formatDurationAdaptive(seconds) });
     }
 
     return data;
   }, [sessionsByDate]);
 
-  const dailySessionsData = useMemo(() => {
+  const dailyFocusData = useMemo(() => {
     const today = new Date();
-    const data = [] as Array<{ day:number; sessions:number }>;
+    const data = [] as Array<{ day: number; seconds: number; label: string }>;
 
-    for (let i = 29; i >= 0; i -= 1) {
+    for (let i = 6; i >= 0; i -= 1) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
       const key = d.toISOString().split('T')[0];
-      data.push({ day: Number(key.split('-')[2]), sessions: sessionsByDate[key]?.sessions ?? 0 });
+      const seconds = sessionsByDate[key]?.seconds ?? 0;
+      data.push({ day: Number(key.split('-')[2]), seconds, label: formatDurationAdaptive(seconds) });
     }
 
     return data;
@@ -91,21 +96,52 @@ export default function StatisticsScreen() {
     await setStatisticsGuideDismissedFlag(true);
   };
 
+  useFocusEffect(
+    React.useCallback(() => {
+      setLastStatsRefreshAt(Date.now());
+    }, [history.length])
+  );
+
   const statsGuideSteps = [
     'If interruptions rise, tighten your penalty settings.',
     'If sessions drop, reduce focus duration to rebuild consistency.',
     'Aim for stable weekly focus trend, not perfect days.',
   ];
 
-  // build stats cards dynamically
+  const totalFocusedSeconds = useMemo(
+    () => history.reduce((sum, session) => sum + (session.duration ?? 0), 0),
+    [history]
+  );
+
+  const latestCompletedSession = useMemo(
+    () => history.find((session) => Boolean(session.end)) ?? null,
+    [history]
+  );
+
   const statsCards = [
-    { label: 'Successful Focus Sessions', value: String(totalSessions) },
+    { label: 'Completed Focus Sessions', value: String(totalSessions) },
     { label: 'Long Breaks Taken', value: String(longBreaksCompleted) },
     { label: 'Total Interruptions', value: String(totalInterruptions) },
   ];
 
-  // Calculate max hours for bar chart scaling
-  const maxHours = Math.max(...weeklyData.map((d) => d.hours), 1);
+  const weeklyUnit = getAdaptiveDurationUnit(Math.max(...weeklyData.map((d) => d.seconds), 0));
+  const weeklyChartData = weeklyData.map((item) => ({
+    ...item,
+    chartValue: toAdaptiveDurationValue(item.seconds, weeklyUnit),
+  }));
+  const maxWeeklyValue = Math.max(...weeklyChartData.map((d) => d.chartValue), 1);
+  const weeklyYAxisTicks = [4, 3, 2, 1, 0].map((step) => {
+    const tickValue = (maxWeeklyValue / 4) * step;
+    const rounded = tickValue >= 10 ? Math.round(tickValue) : Number(tickValue.toFixed(1));
+    return `${rounded}${weeklyUnit}`;
+  });
+
+  const dailyUnit = getAdaptiveDurationUnit(Math.max(...dailyFocusData.map((d) => d.seconds), 0));
+  const dailyChartData = dailyFocusData.map((item) => ({
+    ...item,
+    chartValue: toAdaptiveDurationValue(item.seconds, dailyUnit),
+  }));
+  const maxDailyValue = Math.max(...dailyChartData.map((d) => d.chartValue), 1);
 
   return (
     <LinearGradient
@@ -119,6 +155,12 @@ export default function StatisticsScreen() {
         >
           {/* 🎯 HEADER */}
           <Text style={styles.heading}>Statistics</Text>
+          <Text style={styles.statsFeedback}>
+            Updated {new Date(lastStatsRefreshAt).toLocaleTimeString()} • Total focus {formatDurationAdaptive(totalFocusedSeconds)}
+            {latestCompletedSession?.end
+              ? ` • Last session ${new Date(latestCompletedSession.end).toLocaleTimeString()}`
+              : ' • No completed sessions yet'}
+          </Text>
           <Pressable onPress={() => setShowStatsGuide(true)} style={styles.guideTrigger}>
             <Text style={styles.guideTriggerText}>Show me how to read these stats</Text>
           </Pressable>
@@ -142,35 +184,29 @@ export default function StatisticsScreen() {
             <View style={styles.chartContainer}>
               {/* Y-axis labels */}
               <View style={styles.yAxis}>
-                <Text style={styles.yAxisLabel}>4</Text>
-                <Text style={styles.yAxisLabel}>3</Text>
-                <Text style={styles.yAxisLabel}>2</Text>
-                <Text style={styles.yAxisLabel}>1</Text>
-                <Text style={styles.yAxisLabel}>0</Text>
+                {weeklyYAxisTicks.map((tick) => (
+                  <Text key={tick} style={styles.yAxisLabel}>{tick}</Text>
+                ))}
               </View>
 
               {/* Bars */}
               <View style={styles.barsContainer}>
-                {weeklyData.map((item, index) => {
-                  // Calculate bar height (max 120px for 4 hours)
-                  const barHeight = (item.hours / 4) * 200;
-                  
+                {weeklyChartData.map((item, index) => {
+                  const barHeight = (item.chartValue / maxWeeklyValue) * 200;
+
                   return (
                     <View key={index} style={styles.barWrapper}>
-                      {/* Hour label on top of bar */}
                       <Text style={styles.barTopLabel}>{item.label}</Text>
-                      
-                      {/* Bar */}
+
                       <View style={styles.barContainer}>
-                        <View 
+                        <View
                           style={[
-                            styles.bar, 
+                            styles.bar,
                             { height: barHeight }
-                          ]} 
+                          ]}
                         />
                       </View>
-                      
-                      {/* Day label below bar */}
+
                       <Text style={styles.barBottomLabel}>{item.day}</Text>
                     </View>
                   );
@@ -179,33 +215,42 @@ export default function StatisticsScreen() {
             </View>
           </Card>
 
-          {/* 🎯 DAILY SESSIONS LINE CHART */}
+          {/* 🎯 DAILY FOCUS TIME CHART */}
           <Card>
-            <Text style={styles.cardTitle}>Daily Sessions</Text>
-            <Text style={styles.chartHint}>Aim for repeatable streaks, not perfect days.</Text>
-            
-            {/* Line Chart Container */}
-            <View style={styles.lineChartContainer}>
-              {/* Y-axis */}
-              <View style={styles.lineYAxis}>
-                <Text style={styles.yAxisLabel}>5</Text>
-                <Text style={styles.yAxisLabel}>4</Text>
-                <Text style={styles.yAxisLabel}>3</Text>
-                <Text style={styles.yAxisLabel}>2</Text>
-                <Text style={styles.yAxisLabel}>1</Text>
-                <Text style={styles.yAxisLabel}>0</Text>
+            <Text style={styles.cardTitle}>Daily Focus Time</Text>
+            <Text style={styles.chartHint}>Last 7 days of focused time. Today updates after each completed focus session.</Text>
+
+            <View style={styles.chartContainer}>
+              <View style={styles.yAxis}>
+                {[4, 3, 2, 1, 0].map((step) => {
+                  const tickValue = (maxDailyValue / 4) * step;
+                  const rounded = tickValue >= 10 ? Math.round(tickValue) : Number(tickValue.toFixed(1));
+                  return <Text key={`daily-${step}`} style={styles.yAxisLabel}>{`${rounded}${dailyUnit}`}</Text>;
+                })}
               </View>
 
-              {/* Chart Area with gradient fill */}
-              <View style={styles.lineChartArea}>
-                {/* Simplified line chart visualization */}
-                <LinearGradient
-                  colors={['rgba(74, 144, 226, 0.3)', 'rgba(74, 144, 226, 0.05)']}
-                  style={styles.lineChartGradient}
-                >
-                  {/* Line path (simplified - use react-native-svg for real implementation) */}
-                  <View style={styles.lineChartLine} />
-                </LinearGradient>
+              <View style={styles.barsContainer}>
+                {dailyChartData.map((item, index) => {
+                  const barHeight = (item.chartValue / maxDailyValue) * 200;
+
+                  return (
+                    <View key={`daily-${index}`} style={styles.barWrapper}>
+                      <Text style={styles.barTopLabel}>{item.label}</Text>
+
+                      <View style={styles.barContainer}>
+                        <View
+                          style={[
+                            styles.bar,
+                            styles.dailyBar,
+                            { height: barHeight }
+                          ]}
+                        />
+                      </View>
+
+                      <Text style={styles.barBottomLabel}>{item.day}</Text>
+                    </View>
+                  );
+                })}
               </View>
             </View>
           </Card>
@@ -243,6 +288,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
     marginTop: spacing.xxl*2,
+  },
+  statsFeedback: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 
   // 🎯 STATS CARDS
@@ -357,6 +408,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 6,
     borderTopRightRadius: 6,
     minHeight: 8, // Minimum visible height
+  },
+  dailyBar: {
+    backgroundColor: colors.primaryDeep,
   },
   barBottomLabel: {
     fontSize: 11,

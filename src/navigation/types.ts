@@ -4,7 +4,12 @@ import { ROUTES } from './routes';
 
 export type TimerStackParamList = {
 	[ROUTES.TIMER.HOME]: { replayTutorial?: boolean } | undefined;
-	[ROUTES.TIMER.SESSION_COMPLETE]: { sessionId?: string; pauseCount?: number } | undefined;
+	[ROUTES.TIMER.SESSION_COMPLETE]: {
+		sessionId?: string;
+		pauseCount?: number;
+		focusedDurationSeconds?: number;
+		completedAt?: number;
+	} | undefined;
 };
 
 export type BottomTabParamList = {

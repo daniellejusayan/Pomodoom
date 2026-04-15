@@ -84,6 +84,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    flexDirection: 'column',
     height: SHEET_HEIGHT,
     backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
@@ -103,5 +104,6 @@ const styles = StyleSheet.create({
   },
   todoList: {
     flex: 1,
+    minHeight: 0,
   },
 });

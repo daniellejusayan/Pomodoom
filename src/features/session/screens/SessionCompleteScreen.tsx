@@ -8,6 +8,7 @@ import { Audio } from 'expo-av';
 
 import { colors } from '../../../core/theme/colors';
 import { spacing } from '../../../core/theme/spacing';
+import { formatDurationAdaptive, formatPenaltyLabel } from '../../../core/utils/formatters';
 import { useSettings } from '../../../context/SettingsContext';
 import { ROUTES } from '../../../navigation/routes';
 import type { BottomTabParamList, TimerStackParamList } from '../../../navigation/types';
@@ -24,9 +25,13 @@ export default function SessionCompleteScreen() {
   const { vibrationEnabled, soundEnabled, addSessionInterruptions, penaltyType, recordPenaltyUsage } = useSettings();
   const recordedSessionRef = React.useRef<string | null>(null);
 
-  // read pauseCount from params
-  const { sessionId, pauseCount = 0 } = route.params ?? {};
+  // read completion details from params
+  const { sessionId, pauseCount = 0, focusedDurationSeconds = 0 } = route.params ?? {};
   const safePauseCount = Number.isFinite(pauseCount) ? Math.max(0, Math.floor(pauseCount)) : 0;
+  const safeFocusedDurationSeconds = Number.isFinite(focusedDurationSeconds)
+    ? Math.max(0, Math.floor(focusedDurationSeconds))
+    : 0;
+  const focusDurationLabel = formatDurationAdaptive(safeFocusedDurationSeconds);
 
   // record total interruptions once per completed session
   useEffect(() => {
@@ -107,7 +112,7 @@ export default function SessionCompleteScreen() {
             <View style={styles.statsContainer}>
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>Focus Duration:</Text>
-                <Text style={styles.statValue}>25 minutes</Text>
+                <Text style={styles.statValue}>{focusDurationLabel}</Text>
               </View>
 
               <View style={styles.statRow}>
@@ -116,8 +121,8 @@ export default function SessionCompleteScreen() {
               </View>
 
               <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Penalties:</Text>
-                <Text style={styles.statValue}>{penaltyType}</Text>
+                <Text style={styles.statLabel}>Penalty Mode:</Text>
+                <Text style={styles.statValue}>{formatPenaltyLabel(penaltyType)}</Text>
               </View>
             </View>
           </Card>
