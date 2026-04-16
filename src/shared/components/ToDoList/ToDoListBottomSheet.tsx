@@ -82,8 +82,9 @@ const styles = StyleSheet.create({
   sheet: {
     position: 'absolute',
     bottom: 0,
-    left: 0,
-    right: 0,
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     flexDirection: 'column',
     height: SHEET_HEIGHT,
     backgroundColor: colors.surface,

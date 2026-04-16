@@ -279,6 +279,9 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     gap: spacing.lg,
     paddingBottom: spacing.xxl * 2, // Extra space for bottom nav
+    width: '100%',
+    maxWidth: 900,
+    alignSelf: 'center',
   },
   
   // 🎯 HEADER

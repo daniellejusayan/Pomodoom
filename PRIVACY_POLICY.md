@@ -2,7 +2,7 @@
 
 Last updated: April 14, 2026
 
-Pomodoom is developed by Danielle Jusayan.
+Pomodoom is developed by Danielle Jerick M. Jusayan.
 Contact: 6731503051@lamduan.mfu.ac.th
 Address: Mae Fah Luang University, Chiang Rai
 
@@ -40,7 +40,7 @@ You can clear all local data from the app by using:
 You can also uninstall the app to remove local data.
 
 ## Children's Privacy
-Pomodoom is intended for users age 13 and above.
+Pomodoom is intended for users of all ages.
 
 ## Security
 We take reasonable steps to protect app data. However, no method of electronic storage is perfectly secure.
