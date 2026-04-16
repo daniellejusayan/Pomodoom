@@ -9,6 +9,9 @@ export const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     padding: spacing.xl,
     gap: spacing.xl,
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
   },
   headerRow: {
     gap: spacing.xs,
