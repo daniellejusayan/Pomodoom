@@ -1,5 +1,6 @@
 export const ROUTES = {
   ROOT: {
+    WEB_LANDING: 'WebLanding',
     ONBOARDING: 'Onboarding',
     APP: 'AppTabs',
   },
