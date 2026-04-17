@@ -19,6 +19,7 @@ export type BottomTabParamList = {
 };
 
 export type RootStackParamList = {
+	[ROUTES.ROOT.WEB_LANDING]: undefined;
 	[ROUTES.ROOT.ONBOARDING]: undefined;
 	[ROUTES.ROOT.APP]: NavigatorScreenParams<BottomTabParamList>;
 };

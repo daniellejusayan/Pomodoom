@@ -1,7 +1,8 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 
+import LandingPage from '../features/landing/LandingPage';
 import OnboardingScreen from '../features/onboarding/screens/OnboardingScreen';
 import { getOnboardingFlag, setOnboardingFlag, resetOnboardingFlag } from '../services/storage';
 import BottomTabs from './BottomTabs';
@@ -20,6 +21,11 @@ export default function RootNavigator() {
 	useEffect(() => {
 		const loadFlag = async () => {
 			try {
+				if (Platform.OS === 'web') {
+					setIsBootstrapping(false);
+					return;
+				}
+
 				// Reset onboarding in dev mode if FORCE_SHOW_ONBOARDING is true
 				if (__DEV__ && FORCE_SHOW_ONBOARDING) {
 					await resetOnboardingFlag();
@@ -44,6 +50,10 @@ export default function RootNavigator() {
 	};
 
 	const initialRouteName = useMemo(() => {
+		if (Platform.OS === 'web') {
+			return ROUTES.ROOT.WEB_LANDING;
+		}
+
 		const route = hasCompletedOnboarding ? ROUTES.ROOT.APP : ROUTES.ROOT.ONBOARDING;
 		console.log('[RootNavigator] Initial route:', route);
 		return route;
@@ -59,6 +69,7 @@ export default function RootNavigator() {
 
 	return (
 		<RootStack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRouteName}>
+			<RootStack.Screen name={ROUTES.ROOT.WEB_LANDING} component={LandingPage} />
 			<RootStack.Screen name={ROUTES.ROOT.ONBOARDING}>
 				{(props) => <OnboardingScreen {...props} onComplete={handleOnboardingComplete} />}
 			</RootStack.Screen>

@@ -1,11 +1,12 @@
 import { Audio } from 'expo-av';
-import { Vibration } from 'react-native';
+import { Platform, Vibration } from 'react-native';
 
 // 🎵 Single alarm sound
 let soundAsset: any = null;
 
 const loadSound = async () => {
   if (soundAsset) return;
+  if (Platform.OS === 'web') return;
   try {
     soundAsset = require('../../assets/sounds/timesup.mp3');
   } catch {
@@ -14,6 +15,10 @@ const loadSound = async () => {
 };
 
 export async function playAlarm() {
+  if (Platform.OS === 'web') {
+    return;
+  }
+
   await loadSound();
   
   if (!soundAsset) {
@@ -29,6 +34,10 @@ export async function playAlarm() {
 }
 
 export function triggerVibration() {
+  if (Platform.OS === 'web') {
+    return;
+  }
+
   try {
     // Pattern: [delay, vibration duration, delay, vibration, ...]
     Vibration.vibrate([0, 150, 100, 150]);
